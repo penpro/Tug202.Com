@@ -112,6 +112,11 @@ export const seedNews = [
     title: 'A week’s notice, fouled anchors and a thousand volunteer hours: Comanche’s run to Olympia',
     image: 'narrows-fog',
     imageCaption: 'Tacoma Narrows in the fog, September 2, 2026',
+    images: [
+      { name: 'oly-anchor-work', caption: 'Working the fouled chain from the tender' },
+      { name: 'oly-671-pump', caption: 'Water pump surgery on the 6-71 generator' },
+      { name: 'oly-rainbow', caption: 'A rainbow over the bow, seen from Valiant' }
+    ],
     body: `When the Olympia Arts & Heritage Alliance called in late August, they asked a simple question: could Comanche be in Olympia in about a week? AHA was planning the Budd Inlet Six Commemorative Cruise for Saturday, September 5 — an invitation-only program revisiting the 1976 capture and release of six orcas in Budd Inlet, the event that helped turn public understanding of orcas from animals to be caught and displayed into intelligent, social, wild beings deserving protection, and contributed to the end of live captures in Washington and U.S. waters. They wanted the program to happen on the water where it happened. We said yes.
 
 Saying yes meant getting an 82-year-old tug off her anchors first. Comanche had been lying to two anchors near Port Hadlock, and somewhere down in the mud a third anchor from the Army tug LT-2076 had found its way into the pile. The three chains had fouled into a doozy of a tangle. What should have been a morning's work turned into four days straight of heaving, clearing, re-leading and heaving again, with the all-volunteer crew working long hours day in and day out, on almost no sleep, in miserable conditions. The tender tug Valiant spent eight hours pushing Comanche around in circles to unwind the mess and cracked a cylinder head doing it. Along the way the fuel transfer pump on the port main gave up entirely, the water pump on the 6-71 generator let go, and somewhere around $2,000 worth of tools and anchor-chain links went over the side and into the Sound. Most of the crew who lived aboard that week came off a pant size smaller than they went on.
