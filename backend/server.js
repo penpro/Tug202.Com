@@ -53,7 +53,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Server error. Please try again later or email us directly.' });
 });
 
-app.listen(port, () => {
+// Loopback only: nginx is the sole client. Keeps :3202 off the public interface.
+app.listen(port, '127.0.0.1', () => {
   console.log(`tug202 backend listening on :${port}`);
   pool.query('SELECT 1')
     .then(() => console.log('MySQL connection OK'))
