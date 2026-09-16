@@ -333,3 +333,8 @@ p { margin: 0 0 1em; }
   /* The giving form wants ~400px; give it the widest of the three columns. */
   .support-cards { grid-template-columns: 1.6fr 1fr 1fr; }
 }
+
+/* ---- Grants ------------------------------------------------------------- */
+.grant-layout { grid-template-columns: 1.5fr 1fr; align-items: start; }
+@media (max-width: 860px) { .grant-layout { grid-template-columns: 1fr; } }
+code { word-break: break-all; }

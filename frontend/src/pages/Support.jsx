@@ -148,7 +148,7 @@ export default function Support() {
           <p className="small" style={{ marginTop: 18 }}>
             Also: <a href="/donate/tug-comanche-donate-qr.svg" download>QR code as SVG</a> (scales to any size) &middot;
             the code links to <a href={donate.onlineUrl} target="_blank" rel="noreferrer">{donate.onlineUrl?.replace('https://', '')}</a>.
-            Board members: the source templates live in <code>frontend/print/</code> in the site repo; edit and re-run the build script to regenerate everything.
+            Also for the board: the <a href="/documents/tug-comanche-donation-receipt.pdf">donation receipt form</a> (B&amp;W printable). Foundations and sponsors: see our <Link to="/grants">funding proposals</Link>.
           </p>
         </div>
       </section>

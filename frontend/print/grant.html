@@ -1,0 +1,98 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Funding proposal</title>
+<link rel="stylesheet" href="../node_modules/@fontsource/oswald/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/400.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/700.css">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  @page { size: Letter; margin: 0.7in 0.75in 0.85in; } /* overrides _shared's zero margin so the footer has room */
+  /* Letter; Ink-light: navy type, one
+     thin rule of stripe red, no fills. */
+  body { font-size: 10.5pt; line-height: 1.45; }
+  .lh { display: flex; align-items: center; gap: 12pt; border-bottom: 2pt solid #d9422b; padding-bottom: 8pt; margin-bottom: 14pt; }
+  .lh img { width: 0.7in; }
+  .lh .org { font-size: 13pt; color: #0b1f3a; line-height: 1.05; }
+  .lh .meta { font-size: 8.5pt; color: #4a5160; margin-top: 2pt; }
+  .lh .right { margin-left: auto; text-align: right; font-size: 8.5pt; color: #4a5160; }
+  .kicker { font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 0.18em; font-size: 8.5pt; color: #d9422b; }
+  h1 { font-size: 22pt; margin: 2pt 0 4pt; color: #0b1f3a; line-height: 1.05; }
+  .tag { font-size: 11.5pt; color: #4a5160; margin: 0 0 10pt; }
+  .askbox { display: inline-block; border: 1.5pt solid #0b1f3a; padding: 5pt 10pt; margin: 2pt 0 12pt; }
+  .askbox .n { font-family: 'Oswald', sans-serif; font-size: 16pt; color: #0b1f3a; }
+  .askbox .l { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.1em; color: #4a5160; }
+  h2 { font-size: 12.5pt; margin: 14pt 0 4pt; color: #0b1f3a; border-bottom: 0.6pt solid #b9b3a6; padding-bottom: 2pt; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul { margin: 0 0 6pt; padding-left: 16pt; }
+  li { margin-bottom: 2pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.8pt; }
+  th, td { text-align: left; padding: 3pt 5pt; border-bottom: 0.5pt solid #d9d3c6; vertical-align: top; }
+  th { font-weight: 600; color: #1a1f2b; }
+  td.n { text-align: right; white-space: nowrap; }
+  tr.sub th, tr.sub td { border-top: 1pt solid #0b1f3a; font-weight: 700; }
+  tr.ask th, tr.ask td { color: #d9422b; font-weight: 700; border-bottom: 0; }
+  .tl th { width: 22%; font-weight: 600; }
+  .box { border-left: 2.5pt solid #d9422b; padding: 5pt 9pt; margin: 10pt 0; font-size: 9.6pt; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; }
+  .small { font-size: 8.6pt; color: #4a5160; }
+  .avoid { break-inside: avoid; }
+</style></head>
+<body>
+<div id="doc"></div>
+<script>
+  // Called by the build script with one proposal + boilerplate.
+  function money(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  window.render = function (g, bp, org) {
+    const b = g.budget;
+    const rows = b.lines.map(l => `<tr><td>${esc(l.item)}</td><td class="n">${money(l.amount)}</td></tr>`).join('');
+    document.getElementById('doc').innerHTML = `
+      <div class="lh">
+        <img src="../public/images/crest.png" alt="">
+        <div>
+          <div class="display org">Tug Comanche Historical Rescue Foundation</div>
+          <div class="meta">Washington 501(c)(3) public charity &middot; EIN ${esc(org.ein)} &middot; ${esc(org.city)} &middot; tug202.org</div>
+        </div>
+        <div class="right">Funding proposal<br>${esc(g.category)}<br>${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long'})}</div>
+      </div>
+      <div class="kicker">Funding proposal</div>
+      <h1 class="display">${esc(g.title)}</h1>
+      <p class="tag">${esc(g.tagline)}</p>
+      <div class="askbox"><div class="n">${money(b.ask)}</div><div class="l">Total request</div></div>
+
+      <h2>Executive summary</h2><p>${esc(g.summary)}</p>
+      <h2>Statement of need</h2><p>${esc(g.need)}</p>
+      <h2>Project description</h2><p>${esc(g.description)}</p>
+      <h2>Goals &amp; measurable objectives</h2><ul>${g.objectives.map(o=>`<li>${esc(o)}</li>`).join('')}</ul>
+      <h2>Timeline</h2>
+      <table class="tl"><tbody>${g.timeline.map(t=>`<tr><th>${esc(t.when)}</th><td>${esc(t.what)}</td></tr>`).join('')}</tbody></table>
+
+      <div class="avoid">
+      <h2>Budget</h2>
+      <table><tbody>
+        ${rows}
+        <tr class="sub"><th>Direct costs</th><td class="n">${money(b.direct)}</td></tr>
+        ${b.pm>0?`<tr><td>Project management &amp; administration (${b.pmPct}%)</td><td class="n">${money(b.pm)}</td></tr>`:''}
+        <tr><td>Contingency (${b.contingencyPct}%)</td><td class="n">${money(b.contingency)}</td></tr>
+        <tr class="sub"><th>Total project cost</th><td class="n">${money(b.total)}</td></tr>
+        <tr class="ask"><th>Amount requested (rounded)</th><td class="n">${money(b.ask)}</td></tr>
+      </tbody></table>
+      <p class="small">Budget lines are order-of-magnitude planning figures for a 133 ft / 295 GT steel vessel on Puget Sound, deliberately conservative so the funded scope can be delivered in full; they are replaced with vendor quotes at application. Unused contingency is returned or reallocated with funder approval. Partial funding is welcome and combinable with other sources.</p>
+      <p><strong>In-kind and match.</strong> ${esc(g.inKind)}</p>
+      </div>
+
+      <div class="two">
+        <div><h2>Evaluation</h2><ul>${g.evaluation.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>
+        <div><h2>Funder fit</h2><ul>${g.fit.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>
+      </div>
+      <h2>Sustainability</h2><p>${esc(g.sustainability)}</p>
+
+      <h2>Organization overview</h2><p>${esc(bp.organization)}</p>
+      <h2>Vessel history &amp; significance</h2><p>${esc(bp.vessel)}</p>
+      <div class="box"><strong>Legal &amp; operating boundary.</strong> ${esc(bp.boundary)}</div>
+      <p class="small"><strong>Contact:</strong> ${esc(bp.contact)} &middot; The web version of this proposal, with the latest figures, is at tug202.org/grants/${esc(g.slug)}.</p>
+    `;
+  };
+</script>
+</body></html>

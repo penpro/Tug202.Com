@@ -1,0 +1,81 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Donation receipt</title>
+<link rel="stylesheet" href="../node_modules/@fontsource/oswald/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/400.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/700.css">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  /* Black-and-white, ink-light. The only non-black is the thin red rule under
+     the letterhead; everything else prints on a mono laser with zero loss.
+     Grayscale crest so a color printer does not burn toner on it either. */
+  .page { width: 8.5in; height: 11in; padding: 0.6in 0.7in 0.55in; display: flex; flex-direction: column; font-size: 10.5pt; line-height: 1.4; }
+  .lh { display: flex; align-items: center; gap: 12pt; border-bottom: 2pt solid #d9422b; padding-bottom: 8pt; }
+  .lh img { width: 0.85in; filter: grayscale(1); }
+  .lh .org { font-size: 15pt; color: #000; line-height: 1.05; }
+  .lh .meta { font-size: 8.5pt; color: #333; margin-top: 3pt; }
+  .lh .right { margin-left: auto; text-align: right; }
+  .lh .right .t { font-family: 'Oswald', sans-serif; font-size: 18pt; text-transform: uppercase; color: #000; letter-spacing: 0.04em; }
+  .lh .right .f { font-size: 9.5pt; margin-top: 4pt; }
+  .fill { display: inline-block; border-bottom: 0.7pt solid #000; min-width: 1.4in; height: 12pt; vertical-align: bottom; }
+  .intro { margin: 12pt 0 8pt; }
+  h2 { font-size: 11pt; margin: 12pt 0 5pt; color: #000; border-bottom: 0.6pt solid #000; padding-bottom: 2pt; }
+  .row { display: flex; gap: 12pt; align-items: flex-end; margin: 6pt 0; }
+  .row label { white-space: nowrap; font-weight: 600; }
+  .row .fill { flex: 1; }
+  .cb { display: inline-block; width: 10pt; height: 10pt; border: 0.8pt solid #000; vertical-align: -1pt; margin-right: 5pt; }
+  .opt { margin: 5pt 0; }
+  .note { font-size: 8.8pt; color: #222; margin: 3pt 0 0 15pt; }
+  .fine { font-size: 8.5pt; color: #222; margin-top: 6pt; }
+  .sig { margin-top: auto; }
+  .foot { border-top: 0.6pt solid #000; margin-top: 10pt; padding-top: 5pt; font-size: 8pt; color: #333; display: flex; justify-content: space-between; }
+  .tall { height: 30pt; }
+</style></head>
+<body><div class="page">
+  <div class="lh">
+    <img src="../public/images/crest.png" alt="">
+    <div>
+      <div class="display org">Tug Comanche Historical Rescue Foundation</div>
+      <div class="meta">Auburn, Washington &middot; EIN 39-5018917 &middot; IRS Publication 78 listed &mdash; eligible to receive tax-deductible charitable contributions (deductibility code PC)</div>
+    </div>
+    <div class="right">
+      <div class="t">Donation Receipt</div>
+      <div class="f">Receipt No. <span class="fill" style="min-width:1.1in"></span></div>
+      <div class="f">Date issued <span class="fill" style="min-width:1.1in"></span></div>
+    </div>
+  </div>
+
+  <p class="intro">Tug Comanche Historical Rescue Foundation gratefully acknowledges receipt of the contribution described below. This receipt is provided for the donor&rsquo;s tax records and serves as the contemporaneous written acknowledgment described in IRS Publication 1771.</p>
+
+  <h2>Donor</h2>
+  <div class="row"><label>Name</label><span class="fill"></span></div>
+  <div class="row"><label>Mailing address</label><span class="fill"></span></div>
+  <div class="row"><label>Email (optional)</label><span class="fill"></span><label>Phone (optional)</label><span class="fill"></span></div>
+
+  <h2>Contribution</h2>
+  <div class="row"><label>Date received</label><span class="fill" style="flex:0 0 1.6in"></span><label>Received by</label><span class="fill"></span></div>
+  <div class="opt"><span class="cb"></span><strong>Cash / check / electronic</strong> &nbsp; Amount $ <span class="fill" style="min-width:1.3in"></span> &nbsp; Check no. <span class="fill" style="min-width:1in"></span> &nbsp; Method <span class="fill" style="min-width:1.3in"></span></div>
+  <div class="opt"><span class="cb"></span><strong>Non-cash (property, materials, equipment, services)</strong> &nbsp; Description:</div>
+  <div class="fill tall" style="display:block; width:100%; border:0; border-bottom:0.7pt solid #000"></div>
+  <div class="fill tall" style="display:block; width:100%; border:0; border-bottom:0.7pt solid #000"></div>
+  <div class="note">For non-cash contributions the donor is responsible for determining fair market value; the Foundation describes the property only and does not assign a value. Donated services and use of property are generally not deductible.</div>
+  <div class="opt" style="margin-top:8pt"><span class="cb"></span><strong>Restricted</strong> &nbsp; Donor designates this gift for: <span class="fill" style="min-width:3in"></span></div>
+  <div class="note">Unless restricted above, contributions are unrestricted and applied where most needed to preserve and operate Comanche.</div>
+
+  <h2>Goods or services</h2>
+  <div class="opt"><span class="cb"></span>No goods or services were provided by the Foundation in exchange for this contribution.</div>
+  <div class="opt"><span class="cb"></span>Goods or services were provided, described as: <span class="fill" style="min-width:3.2in"></span></div>
+  <div class="row" style="margin-left:15pt"><label>Good-faith estimate of the value of goods or services provided</label><span class="fill" style="flex:0 0 1.4in">&nbsp;$</span></div>
+  <div class="fine">Only the portion of a contribution that exceeds the good-faith value of any goods or services received may be deductible. Donations to the Foundation are always voluntary and are never a condition of coming aboard or of any vessel service. Comanche is not a charter vessel and does not offer paid passenger service. Donors should consult their own tax advisor regarding deductibility and record-keeping requirements.</div>
+
+  <div class="sig">
+    <h2>Authorized acknowledgment</h2>
+    <div class="row"><label>Authorized representative</label><span class="fill"></span><label>Title</label><span class="fill" style="flex:0 0 1.6in"></span></div>
+    <div class="row" style="margin-top:14pt"><label>Signature</label><span class="fill"></span><label>Date</label><span class="fill" style="flex:0 0 1.6in"></span></div>
+    <div class="foot">
+      <span>Tug Comanche Historical Rescue Foundation &middot; tug202.org &middot; info@tug202.org</span>
+      <span>Foundation copy &nbsp;<span class="cb"></span> &nbsp; Donor copy &nbsp;<span class="cb"></span></span>
+    </div>
+  </div>
+</div></body></html>

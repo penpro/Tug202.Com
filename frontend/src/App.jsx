@@ -7,6 +7,7 @@ import Visit from './pages/Visit.jsx'
 import Volunteer from './pages/Volunteer.jsx'
 import Partner from './pages/Partner.jsx'
 import News from './pages/News.jsx'
+import { GrantsIndex, GrantDetail } from './pages/Grants.jsx'
 import Support from './pages/Support.jsx'
 import Contact from './pages/Contact.jsx'
 import NotFound from './pages/NotFound.jsx'
@@ -22,6 +23,8 @@ export default function App() {
         <Route path="volunteer" element={<Volunteer />} />
         <Route path="partner" element={<Partner />} />
         <Route path="news" element={<News />} />
+        <Route path="grants" element={<GrantsIndex />} />
+        <Route path="grants/:slug" element={<GrantDetail />} />
         <Route path="support" element={<Support />} />
         <Route path="donate" element={<Support />} />
         <Route path="contact" element={<Contact />} />

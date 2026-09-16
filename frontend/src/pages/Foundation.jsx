@@ -95,9 +95,16 @@ export default function Foundation() {
                   <tr><th>Affiliations</th><td>Historic Naval Ships Association (member vessel)</td></tr>
                 </tbody>
               </table>
+              <h3 style={{ marginTop: 24 }}>Public documents</h3>
+              <ul className="checklist">
+                <li><a href="/documents/TCHRF-Bylaws-2025-10-23.pdf">Bylaws</a> &mdash; adopted October 23, 2025 (PDF)</li>
+                <li><a href="/documents/tug-comanche-donation-receipt.pdf">Donation receipt form</a> &mdash; printable, black &amp; white (PDF)</li>
+                <li><Link to="/grants">Funding proposals</Link> &mdash; grant-ready project asks with budgets</li>
+                <li><Link to="/support#print">Donation print kit</Link> &mdash; flyer, table card and QR code</li>
+              </ul>
               <p className="small" style={{ marginTop: 10 }}>
-                Donations are tax-deductible to the extent allowed by law. Bylaws, IRS
-                determination letter and annual financials are available on request &mdash;{' '}
+                Donations are tax-deductible to the extent allowed by law. IRS determination letter
+                and annual financials are available on request &mdash;{' '}
                 <Link to="/contact">contact the Secretary</Link>.
               </p>
             </div>

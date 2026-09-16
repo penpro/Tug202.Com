@@ -96,6 +96,7 @@ export const nav = [
   { to: '/partner', label: 'Partner' },
   { to: '/volunteer', label: 'Volunteer' },
   { to: '/news', label: 'News' },
+  { to: '/grants', label: 'Grants' },
   { to: '/support', label: 'Support' },
   { to: '/contact', label: 'Contact' }
 ]
