@@ -1,6 +1,6 @@
 # EC2 setup and domain cutover
 
-Assumes Ubuntu 22.04/24.04, same box or same recipe as the WebDevClass server (nginx + PM2 + MySQL already present). Skip the install steps that already apply.
+Same recipe as the WebDevClass (penumbra) server: nginx + PM2 + MySQL on Ubuntu; deploys are push → pull → run scripts on the server.
 
 ## 1. One-time server setup
 
