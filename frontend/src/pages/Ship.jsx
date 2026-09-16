@@ -116,6 +116,7 @@ export default function Ship() {
             <figure><Photo name="underway-quarter" alt="Comanche underway seen from her quarter" /><figcaption>Underway on Puget Sound</figcaption></figure>
             <figure><Photo name="crew-foredeck" alt="Crew on Comanche's foredeck" /><figcaption>Volunteer crew on the foredeck</figcaption></figure>
             <figure><Photo name="dockside-visitors" alt="Visitors on the pier beside Comanche" /><figcaption>Open ship at the pier</figcaption></figure>
+            <figure><Photo name="narrows-fog" alt="Comanche's bow light and ensign with the Tacoma Narrows Bridge in fog" /><figcaption>Tacoma Narrows in fog, September 2, 2026</figcaption></figure>
           </div>
         </div>
       </section>

@@ -340,4 +340,4 @@ p { margin: 0 0 1em; }
 code { word-break: break-all; }
 
 .news-item { scroll-margin-top: 90px; }
-.news-hero { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius); margin: 10px 0 16px; }
+.news-hero { width: 100%; height: auto; border-radius: var(--radius); margin: 10px 0 16px; }

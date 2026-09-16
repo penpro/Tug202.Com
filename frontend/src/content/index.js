@@ -110,9 +110,10 @@ export const seedNews = [
     id: 'olympia-budd-inlet-2026',
     date: '2026-09-08',
     title: 'A week’s notice, fouled anchors and a thousand volunteer hours: Comanche’s run to Olympia',
-    image: 'underway-quarter',
+    image: 'narrows-fog',
     images: [
-      { name: 'bow-flag', caption: 'Getting underway, September 1' },
+      { name: 'underway-quarter', caption: 'Underway, September 1' },
+      { name: 'bow-flag', caption: 'Bow and ensign at the sendoff' },
       { name: 'deck-crew', caption: 'Sendoff crowd on deck' },
       { name: 'overhead-raft', caption: 'Rafted up before departure' },
       { name: 'crew-foredeck', caption: 'Crew on the foredeck' }
