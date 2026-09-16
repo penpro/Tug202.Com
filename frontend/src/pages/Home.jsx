@@ -116,7 +116,7 @@ export default function Home() {
                 <div className="card-body">
                   <div className="news-date">{formatDate(n.date)}</div>
                   <h3>{n.title}</h3>
-                  <p>{n.body.length > 160 ? n.body.slice(0, 157) + '…' : n.body}</p>
+                  <p>{n.body.length > 160 ? n.body.slice(0, 157).trimEnd() + '…' : n.body}</p>
                 </div>
               </Link>
             ))}

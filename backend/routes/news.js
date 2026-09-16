@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/news', async (req, res, next) => {
   try {
     const [rows] = await pool.query(
-      `SELECT slug AS id, DATE_FORMAT(published_on, '%Y-%m-%d') AS date, title, body
+      `SELECT slug AS id, DATE_FORMAT(published_on, '%Y-%m-%d') AS date, title, body, image
          FROM news_posts
         WHERE is_published = 1
         ORDER BY published_on DESC, id DESC

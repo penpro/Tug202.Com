@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Hero from '../components/Hero.jsx'
 import Seo from '../components/Seo.jsx'
+import Photo from '../components/Photo.jsx'
 import { seedNews } from '../content/index.js'
 import { formatDate } from './Home.jsx'
 
@@ -13,7 +14,11 @@ export default function News() {
     let alive = true
     fetch('/api/news')
       .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then(data => { if (alive && Array.isArray(data.posts) && data.posts.length) setPosts(data.posts) })
+      .then(data => {
+        if (!alive || !Array.isArray(data.posts) || !data.posts.length) return
+        const extras = Object.fromEntries(seedNews.map(s => [s.id, s]))
+        setPosts(data.posts.map(p => ({ ...p, image: p.image || extras[p.id]?.image, images: extras[p.id]?.images })))
+      })
       .catch(() => { if (alive) setPosts(seedNews) })
     return () => { alive = false }
   }, [])
@@ -34,10 +39,16 @@ export default function News() {
       <section className="section">
         <div className="container" style={{ maxWidth: 820 }}>
           {list.map(n => (
-            <article className="news-item" key={n.id}>
+            <article className="news-item" key={n.id} id={n.id}>
               <div className="news-date">{formatDate(n.date)}</div>
-              <h3>{n.title}</h3>
-              <p style={{ whiteSpace: 'pre-line' }}>{n.body}</p>
+              <h3><a href={`#${n.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{n.title}</a></h3>
+              {n.image && <Photo name={n.image} alt="" className="news-hero" />}
+              {n.body.split(/\n\s*\n/).map((para, i) => <p key={i}>{para}</p>)}
+              {n.images?.length > 0 && (
+                <div className="photo-grid" style={{ marginTop: 12 }}>
+                  {n.images.map(im => <figure key={im.name}><Photo name={im.name} alt={im.caption} /><figcaption>{im.caption}</figcaption></figure>)}
+                </div>
+              )}
             </article>
           ))}
         </div>

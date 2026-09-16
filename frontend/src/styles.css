@@ -338,3 +338,6 @@ p { margin: 0 0 1em; }
 .grant-layout { grid-template-columns: 1.5fr 1fr; align-items: start; }
 @media (max-width: 860px) { .grant-layout { grid-template-columns: 1fr; } }
 code { word-break: break-all; }
+
+.news-item { scroll-margin-top: 90px; }
+.news-hero { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius); margin: 10px 0 16px; }
