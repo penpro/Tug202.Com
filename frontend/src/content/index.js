@@ -137,7 +137,7 @@ Thank you to everyone who made it happen: Quinn Adcock, Sean Kilkenny, Sophia Mi
     images: [
       { name: 'deck-crew', caption: 'The crowd on the fantail' },
       { name: 'bow-flag', caption: 'Bow and ensign' },
-      { name: 'crew-foredeck', caption: 'Crew on the foredeck' },
+      { name: 'crew-foredeck', caption: 'Concert on the foredeck' },
       { name: 'port-townsend-raftup', caption: 'Rafted up with friends' }
     ],
     body: `Comanche spent Labor Day weekend 2025 doing what she does best: bringing people together on the water. Rafted up with friends near Port Townsend, she hosted a concert aboard with music on the fantail, a full deck of guests, and the drone overhead catching it all — her WWII camouflage on one side and her Coast Guard stripe on the other. Thanks to every volunteer who cleaned, rigged, cooked and handled lines, and to the musicians who made an 81-year-old tug the best stage on Puget Sound for a day.`

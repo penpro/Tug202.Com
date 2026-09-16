@@ -114,7 +114,7 @@ export default function Ship() {
             <figure><Photo name="starboard-cg-stripe" alt="Starboard side of Comanche with Coast Guard stripe" /><figcaption>Starboard side: Coast Guard livery</figcaption></figure>
             <figure><Photo name="overhead-raft" alt="Overhead drone view of Comanche rafted with another vessel" /><figcaption>Labor Day concert, September 2025</figcaption></figure>
             <figure><Photo name="underway-quarter" alt="Comanche underway seen from her quarter" /><figcaption>Underway on Puget Sound</figcaption></figure>
-            <figure><Photo name="crew-foredeck" alt="Crew on Comanche's foredeck" /><figcaption>Volunteer crew on the foredeck</figcaption></figure>
+            <figure><Photo name="crew-foredeck" alt="Crew on Comanche's foredeck" /><figcaption>Concert on the foredeck, Labor Day 2025</figcaption></figure>
             <figure><Photo name="dockside-visitors" alt="Visitors on the pier beside Comanche" /><figcaption>Open ship at the pier</figcaption></figure>
             <figure><Photo name="narrows-fog" alt="Comanche's bow light and ensign with the Tacoma Narrows Bridge in fog" /><figcaption>Tacoma Narrows in fog, September 2, 2026</figcaption></figure>
           </div>
