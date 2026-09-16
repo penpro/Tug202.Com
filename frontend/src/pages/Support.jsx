@@ -4,6 +4,7 @@ import Photo from '../components/Photo.jsx'
 import Seo from '../components/Seo.jsx'
 import SignupForm from '../components/SignupForm.jsx'
 import { org, donate, costs } from '../site.config.js'
+import { GivebutterForm, givebutterConfigured } from '../components/Givebutter.jsx'
 import { wishlist } from '../content/index.js'
 
 export default function Support() {
@@ -21,15 +22,17 @@ export default function Support() {
 
       <section className="section">
         <div className="container">
-          <div className="grid grid-3" style={{ alignItems: 'start' }}>
-            <div className="card">
+          <div className="grid grid-3 support-cards" style={{ alignItems: 'start' }}>
+            <div className="card" id="give">
               <div className="card-body">
                 <span className="eyebrow">Give online</span>
                 <h3>One-time or monthly</h3>
-                {donate.onlineUrl ? (
+                {givebutterConfigured() ? (
                   <>
-                    <p>Secure online giving through our donation partner.</p>
-                    <a className="btn btn-primary" href={donate.onlineUrl} target="_blank" rel="noreferrer">Donate now</a>
+                    <GivebutterForm />
+                    <p className="small" style={{ marginTop: 12 }}>
+                      Form not loading? <a href={donate.onlineUrl} target="_blank" rel="noreferrer">Give on our Givebutter page</a> instead.
+                    </p>
                   </>
                 ) : (
                   <>

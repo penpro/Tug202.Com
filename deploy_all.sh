@@ -9,6 +9,7 @@ set -euo pipefail
 #
 # Individual steps:
 #   db/migrate.sh
+#   deploy_nginx.sh
 #   deploy_backend.sh
 #   deploy_frontend.sh
 
@@ -27,6 +28,10 @@ git pull --ff-only
 echo ""
 echo "==> Applying database migrations"
 "$REPO_ROOT/db/migrate.sh"
+
+echo ""
+echo "==> Syncing nginx config"
+"$REPO_ROOT/deploy_nginx.sh" "$REPO_ROOT"
 
 echo ""
 echo "==> Deploying backend"

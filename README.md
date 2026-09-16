@@ -10,7 +10,7 @@ backend/    Express on :3202 — /api/contact, /api/volunteer, /api/partner, /ap
 db/         init.sql (one-time), migrate.sh + migrations/ (rerunnable)
 nginx/      site config + security-headers snippet
 ops/        EC2 setup + domain cutover runbook
-deploy_*.sh Run on the server after git pull
+deploy_*.sh Run on the server after git pull (all / nginx / backend / frontend)
 ```
 
 ## Local development
@@ -31,7 +31,7 @@ Search `frontend/src/site.config.js` for `TODO`:
 - **Phone** — the 1‑888 number from the 2025 press release is not published until confirmed active.
 - **Facebook URL** — confirm the page slug.
 - **Mailing address for checks** — not published until the board picks one (COD still lists the Bremerton address under the old name).
-- **Online donation URL** — `donate.onlineUrl`. Until set, the Support page shows check + "contact us" only. If the provider is embedded in an iframe, add its origin to `frame-src` in `nginx/security-headers.conf`.
+- **Givebutter** — `givebutter.accountId` (Settings → Developers → Widgets) and `givebutter.campaign` (the slug in `givebutter.com/<campaign>`). Until both are set, the Support page shows check + "contact us" only. CSP already allows `*.givebutter.com`.
 
 Framing: Comanche is an **operational** museum ship that gets underway under her own power and cruises through nonprofit partnerships; she is never a charter/for-hire vessel. Keep that distinction in any new copy.
 

@@ -324,3 +324,12 @@ p { margin: 0 0 1em; }
 }
 .modal-close:hover { background: rgba(11,31,58,0.08); color: var(--ink); }
 @media (max-width: 620px) { .modal { padding: 22px 18px 18px; } }
+
+/* ---- Givebutter embed ---------------------------------------------------- */
+.gb-embed { min-height: 120px; margin-top: 8px; }
+.gb-embed givebutter-giving-form { display: block; width: 100%; }
+#give { scroll-margin-top: 90px; }
+@media (min-width: 901px) {
+  /* The giving form wants ~400px; give it the widest of the three columns. */
+  .support-cards { grid-template-columns: 1.6fr 1fr 1fr; }
+}

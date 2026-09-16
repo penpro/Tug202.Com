@@ -53,10 +53,21 @@ export const costs = {
   perPierDay: 250   // USD per day alongside a pier (moorage, utilities, crew, supplies)
 }
 
+// Givebutter. Both values come from the Givebutter dashboard:
+//   accountId - Settings > Developers > Widgets (looks like "GQ0CYPreD923uMBv")
+//   campaign  - the campaign code = the slug in https://givebutter.com/<campaign>
+//               (Campaign > Sharing > Widgets shows it inside every snippet)
+// TODO: fill these in. Until both are set, the Support page shows the
+// check-by-mail / "contact us" fallback and the Donate button goes to /support.
+export const givebutter = {
+  accountId: null,
+  campaign: null
+}
+
 export const donate = {
-  // TODO: paste the live PayPal / Zeffy / Givebutter donate URL here. Until it
-  // is set, the Donate page shows check-by-mail and "contact us" options only.
-  onlineUrl: null,
+  // Public campaign page, derived from the campaign code above. Used as the
+  // no-JS fallback link under the embed.
+  get onlineUrl() { return givebutter.campaign ? `https://givebutter.com/${givebutter.campaign}` : null },
   checkPayableTo: 'Tug Comanche Historical Rescue Foundation'
 }
 

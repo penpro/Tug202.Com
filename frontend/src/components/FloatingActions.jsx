@@ -28,15 +28,9 @@ export default function FloatingActions() {
         <button type="button" className="fab fab-signup" onClick={() => setOpen(true)}>
           <span aria-hidden="true">&#9993;</span> Sign up
         </button>
-        {donate.onlineUrl ? (
-          <a className="fab fab-donate" href={donate.onlineUrl} target="_blank" rel="noreferrer">
-            <span aria-hidden="true">&#9829;</span> Donate
-          </a>
-        ) : (
-          <Link className="fab fab-donate" to="/support">
-            <span aria-hidden="true">&#9829;</span> Donate
-          </Link>
-        )}
+        <Link className="fab fab-donate" to={donate.onlineUrl ? '/support#give' : '/support'}>
+          <span aria-hidden="true">&#9829;</span> Donate
+        </Link>
       </div>
 
       {open && (

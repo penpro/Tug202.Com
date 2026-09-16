@@ -6,8 +6,15 @@ import FloatingActions from './FloatingActions.jsx'
 
 // Scroll to top on route change; a SPA otherwise keeps the old scroll offset.
 function ScrollToTop() {
-  const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  const { pathname, hash } = useLocation()
+  useEffect(() => {
+    if (hash) {
+      // Let the page render, then jump to the anchor (e.g. /support#give).
+      const t = setTimeout(() => document.querySelector(hash)?.scrollIntoView({ block: 'start' }), 50)
+      return () => clearTimeout(t)
+    }
+    window.scrollTo(0, 0)
+  }, [pathname, hash])
   return null
 }
 
