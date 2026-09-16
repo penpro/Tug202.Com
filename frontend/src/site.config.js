@@ -24,6 +24,19 @@ export const org = {
   domain: 'tug202.org'
 }
 
+// Where the ship is right now. Edit here and deploy — it shows on the home
+// hero, the Visit page, the footer and the partner-inquiry form.
+//   status  - short public-facing line
+//   place   - city/area, used in sentences
+//   updated - ISO date the status was last confirmed (shown as "as of")
+//   note    - optional detail (access, how to find her). Null to hide.
+export const location = {
+  status: 'Anchored in Budd Inlet — Olympia',
+  place: 'Olympia',
+  updated: '2026-09-16',
+  note: 'At anchor, not alongside a pier: there is no walk-up public access right now. Watch the news page or Facebook for the next open-ship dates.'
+}
+
 export const vessel = {
   name: 'Comanche',
   designations: ['ATA-202', 'USS Wampanoag (ATA-202)', 'USCGC Comanche (WMEC-202)'],

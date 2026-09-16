@@ -39,6 +39,8 @@ Content flagged `verify: true` in `frontend/src/content/index.js` (1959 Coast Gu
 
 ## Managing content
 
+- **Ship's current location** — `location` in `frontend/src/site.config.js` (`status`, `updated`, optional `note`). Shows on the home hero, Visit page, footer and partner form. Edit, then `ops/remote-deploy.sh`.
+
 - **News posts** — insert rows into `news_posts` (see `db/migrations/002_seed_news.sql` for the shape). `/api/news` serves published rows; the frontend falls back to the bundled seed list if the API is down. Ship a new migration file for anything you want reproducible.
 - **Board roster, programs, volunteer roles, wishlist, timeline** — edit `frontend/src/content/index.js`, rebuild.
 - **Funding proposals** — `frontend/src/content/grants.js` is the single source: the `/grants` pages render it and the build script renders one PDF per proposal into `frontend/public/grants/`. Budgets are computed from line items + PM% + contingency% and rounded up to $10k. Edit, re-run `node scripts/build-print-assets.cjs`, commit the PDFs.

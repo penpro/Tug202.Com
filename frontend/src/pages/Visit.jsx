@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import Hero from '../components/Hero.jsx'
 import Photo from '../components/Photo.jsx'
 import Seo from '../components/Seo.jsx'
-import { org } from '../site.config.js'
+import { formatDate } from './Home.jsx'
+import { org, location } from '../site.config.js'
 
 export default function Visit() {
   return (
@@ -24,12 +25,17 @@ export default function Visit() {
               <span className="eyebrow">Where &amp; when</span>
               <h2>Current location and hours</h2>
               <div className="notice">
-                <p>
-                  <strong>Comanche&rsquo;s berth changes with the season and with moorage availability.</strong>{' '}
-                  Before you travel, check the <Link to="/news">news page</Link> or our{' '}
-                  <a href={org.facebook} target="_blank" rel="noreferrer">Facebook page</a> for the
-                  current location and the next open-ship date, or{' '}
-                  <Link to="/contact">send us a note</Link> and we will get back to you.
+                <p style={{ marginBottom: 6 }}>
+                  <span className="eyebrow" style={{ marginBottom: 2 }}>Right now</span>
+                  <strong style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{location.status}</strong>
+                  <span className="small" style={{ display: 'block' }}>as of {formatDate(location.updated)}</span>
+                </p>
+                {location.note && <p>{location.note}</p>}
+                <p style={{ marginBottom: 0 }}>
+                  Comanche&rsquo;s berth changes with the season and with moorage availability. Before
+                  you travel, check the <Link to="/news">news page</Link> or our{' '}
+                  <a href={org.facebook} target="_blank" rel="noreferrer">Facebook page</a> for the next
+                  open-ship date, or <Link to="/contact">send us a note</Link>.
                 </p>
               </div>
               <p>

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import Hero from '../components/Hero.jsx'
 import Photo from '../components/Photo.jsx'
 import Seo from '../components/Seo.jsx'
-import { vessel } from '../site.config.js'
+import { vessel, location } from '../site.config.js'
 import { mission, programs, seedNews } from '../content/index.js'
 
 export default function Home() {
@@ -12,7 +12,7 @@ export default function Home() {
       <Seo />
       <Hero
         image="hero-port-dazzle"
-        eyebrow="Est. 1944 &middot; Puget Sound, Washington"
+        eyebrow={`Est. 1944 · Now: ${location.status}`}
         title={<>Tug <em style={{ fontStyle: 'normal', color: 'var(--brass)' }}>Comanche</em></>}
         lead="A World War II Navy ocean tug turned Coast Guard cutter, still underway under her own power — kept alive by volunteers as a living classroom for maritime history, hands-on skills and the next generation of mariners."
       >

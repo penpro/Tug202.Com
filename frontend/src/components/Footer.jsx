@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { org, nav, vessel } from '../site.config.js'
+import { org, nav, vessel, location } from '../site.config.js'
 
 export default function Footer() {
   return (
@@ -34,6 +34,7 @@ export default function Footer() {
           </div>
           <div>
             <h4>Contact</h4>
+            <p style={{ marginBottom: 10 }}><span className="small" style={{ color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ship&rsquo;s position</span><br />{location.status}</p>
             <ul>
               <li><a href={`mailto:${org.email}`}>{org.email}</a></li>
               {org.phone && <li><a href={`tel:${org.phone}`}>{org.phone}</a></li>}

@@ -4,7 +4,7 @@ import Hero from '../components/Hero.jsx'
 import Photo from '../components/Photo.jsx'
 import Seo from '../components/Seo.jsx'
 import useApiForm from '../components/useApiForm.js'
-import { org, costs } from '../site.config.js'
+import { org, costs, location } from '../site.config.js'
 
 const compat = [
   'Comanche’s nonprofit and historical mission',
@@ -392,7 +392,7 @@ export default function Partner() {
                 Because every event is different, the best first step is to talk with us. The form
                 covers what we need to know; you can also email{' '}
                 <a href={`mailto:${org.email}`}>{org.email}</a>. When you fill in the location, we
-                will look at the miles from wherever Comanche is berthed at the time, out to your
+                will look at the miles from wherever Comanche is at the time, out to your
                 event and back, and share the resulting picture with you honestly.
               </p>
               <p className="lead" style={{ color: 'var(--navy-800)' }}>
@@ -433,7 +433,7 @@ export default function Partner() {
                 <div>
                   <label htmlFor="p-loc">Where would the event occur?</label>
                   <input id="p-loc" placeholder="e.g. Budd Inlet, Olympia" value={form.location} onChange={set('location')} />
-                  <span className="small">Transit to and from the event is part of the mission (~${costs.perMile}/mile, bare operating cost).</span>
+                  <span className="small">Transit to and from the event is part of the mission (~${costs.perMile}/mile, bare operating cost). Comanche is currently: {location.status}.</span>
                 </div>
               </div>
               <div className="row">
