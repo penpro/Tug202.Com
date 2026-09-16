@@ -60,9 +60,9 @@ export const costs = {
 //               "Account attribute is required" without it). Until it is set,
 //               the Support page links out to the campaign page instead.
 export const givebutter = {
-  // TODO: Settings > Developers > Widgets > "I use another platform" > copy the
-  // value after ?acct= in the <script> line. Nothing renders inline without it.
-  accountId: null,
+  // From Settings > Developers > Widgets > the small "Installation" script at
+  // the top (the value after ?acct=). Nothing renders inline without it.
+  accountId: 'uckBhaa1GKtq6Jyt',
   campaign: 'support-ata-202-comanche-x0xpns',
   // Dashboard-created widgets (Campaign > Sharing > Widgets). Rendered with
   // <givebutter-widget id="..."> once accountId is set.

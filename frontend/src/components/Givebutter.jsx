@@ -18,7 +18,7 @@ function useGivebutterScript() {
       s.id = SCRIPT_ID
       s.async = true
       s.src = 'https://widgets.givebutter.com/latest.umd.cjs' +
-        (givebutter.accountId ? `?acct=${encodeURIComponent(givebutter.accountId)}` : '')
+        (givebutter.accountId ? `?acct=${encodeURIComponent(givebutter.accountId)}&p=other` : '')
       s.addEventListener('load', () => { s.dataset.loaded = '1'; setReady(true) })
       document.head.appendChild(s)
     } else if (s.dataset.loaded) {
