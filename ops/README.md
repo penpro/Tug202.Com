@@ -4,7 +4,7 @@ Same recipe as the WebDevClass (penumbra) server: nginx + PM2 + MySQL on Ubuntu;
 
 ## 1. One-time server setup
 
-Instance: Ubuntu 26.04, 1 GB RAM, security group open on 22 (your IP), 80 and 443 (anywhere). The PEM key lives at `D:\ATA202Website.pem` (outside the repo, never committed).
+Instance: Ubuntu 26.04, 1 GB RAM, security group open on 22 (your IP), 80 and 443 (anywhere). The PEM key lives at `D:\ATA202\202Website\202.pem` (outside the repo, never committed).
 
 One command does everything (swap, nginx, MySQL, Node 22, pm2, clone, DB + generated secrets, migrations, nginx config, first deploy):
 
