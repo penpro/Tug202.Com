@@ -54,14 +54,13 @@ export const costs = {
 }
 
 // Givebutter. Both values come from the Givebutter dashboard:
-//   accountId - Settings > Developers > Widgets (looks like "GQ0CYPreD923uMBv")
 //   campaign  - the campaign code = the slug in https://givebutter.com/<campaign>
-//               (Campaign > Sharing > Widgets shows it inside every snippet)
-// TODO: fill these in. Until both are set, the Support page shows the
-// check-by-mail / "contact us" fallback and the Donate button goes to /support.
+//   accountId - Settings > Integrations > Widgets section (looks like "GQ0CYPreD923uMBv").
+//               Optional: the widget library loads without it; set it if
+//               Givebutter ever requires it or for account-level widgets.
 export const givebutter = {
-  accountId: null,
-  campaign: null
+  accountId: null, // TODO: paste from Settings > Integrations if needed
+  campaign: 'support-ata-202-comanche-x0xpns'
 }
 
 export const donate = {

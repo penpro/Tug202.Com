@@ -11,13 +11,14 @@ const SCRIPT_ID = 'givebutter-widgets'
 function useGivebutterScript() {
   const [ready, setReady] = useState(() => !!document.getElementById(SCRIPT_ID)?.dataset.loaded)
   useEffect(() => {
-    if (!givebutter.accountId) return
+    if (!givebutter.campaign) return
     let s = document.getElementById(SCRIPT_ID)
     if (!s) {
       s = document.createElement('script')
       s.id = SCRIPT_ID
       s.async = true
-      s.src = `https://widgets.givebutter.com/latest.umd.cjs?acct=${encodeURIComponent(givebutter.accountId)}`
+      s.src = 'https://widgets.givebutter.com/latest.umd.cjs' +
+        (givebutter.accountId ? `?acct=${encodeURIComponent(givebutter.accountId)}` : '')
       s.addEventListener('load', () => { s.dataset.loaded = '1'; setReady(true) })
       document.head.appendChild(s)
     } else if (s.dataset.loaded) {
@@ -29,7 +30,7 @@ function useGivebutterScript() {
   return ready
 }
 
-export const givebutterConfigured = () => !!(givebutter.accountId && givebutter.campaign)
+export const givebutterConfigured = () => !!givebutter.campaign
 
 // Full giving form, embedded inline. Renders nothing when not configured so
 // the caller can show its own fallback.
