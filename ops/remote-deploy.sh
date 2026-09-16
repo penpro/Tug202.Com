@@ -8,7 +8,7 @@ set -euo pipefail
 #   ops/remote-deploy.sh
 #   PEM=/path/to/202.pem HOST=ubuntu@1.2.3.4 ops/remote-deploy.sh
 
-HOST="${HOST:-ubuntu@ec2-18-234-239-255.compute-1.amazonaws.com}"
+HOST="${HOST:-ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com}"
 PEM="${PEM:-$(dirname "$0")/../../202.pem}"
 
 if [ ! -f "$PEM" ]; then
