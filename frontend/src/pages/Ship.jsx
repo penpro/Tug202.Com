@@ -112,7 +112,7 @@ export default function Ship() {
           <div className="photo-grid">
             <figure><Photo name="hero-port-dazzle" alt="Port side of Comanche in WWII camouflage" /><figcaption>Port side: WWII Navy camouflage</figcaption></figure>
             <figure><Photo name="starboard-cg-stripe" alt="Starboard side of Comanche with Coast Guard stripe" /><figcaption>Starboard side: Coast Guard livery</figcaption></figure>
-            <figure><Photo name="overhead-raft" alt="Overhead drone view of Comanche rafted with another vessel" /><figcaption>Rafted up before the Olympia run, September 2026</figcaption></figure>
+            <figure><Photo name="overhead-raft" alt="Overhead drone view of Comanche rafted with another vessel" /><figcaption>Labor Day concert, September 2025</figcaption></figure>
             <figure><Photo name="underway-quarter" alt="Comanche underway seen from her quarter" /><figcaption>Underway on Puget Sound</figcaption></figure>
             <figure><Photo name="crew-foredeck" alt="Crew on Comanche's foredeck" /><figcaption>Volunteer crew on the foredeck</figcaption></figure>
             <figure><Photo name="dockside-visitors" alt="Visitors on the pier beside Comanche" /><figcaption>Open ship at the pier</figcaption></figure>

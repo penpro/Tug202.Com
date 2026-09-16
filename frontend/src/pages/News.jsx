@@ -17,7 +17,7 @@ export default function News() {
       .then(data => {
         if (!alive || !Array.isArray(data.posts) || !data.posts.length) return
         const extras = Object.fromEntries(seedNews.map(s => [s.id, s]))
-        setPosts(data.posts.map(p => ({ ...p, image: p.image || extras[p.id]?.image, images: extras[p.id]?.images })))
+        setPosts(data.posts.map(p => ({ ...p, image: p.image || extras[p.id]?.image, imageCaption: extras[p.id]?.imageCaption, images: extras[p.id]?.images })))
       })
       .catch(() => { if (alive) setPosts(seedNews) })
     return () => { alive = false }
@@ -42,7 +42,7 @@ export default function News() {
             <article className="news-item" key={n.id} id={n.id}>
               <div className="news-date">{formatDate(n.date)}</div>
               <h3><a href={`#${n.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{n.title}</a></h3>
-              {n.image && <Photo name={n.image} alt="" className="news-hero" />}
+              {n.image && <figure style={{ margin: 0 }}><Photo name={n.image} alt={n.imageCaption || ''} className="news-hero" />{n.imageCaption && <figcaption className="small" style={{ marginTop: -8, marginBottom: 14 }}>{n.imageCaption}</figcaption>}</figure>}
               {n.body.split(/\n\s*\n/).map((para, i) => <p key={i}>{para}</p>)}
               {n.images?.length > 0 && (
                 <div className="photo-grid" style={{ marginTop: 12 }}>
