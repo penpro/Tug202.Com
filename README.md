@@ -56,6 +56,25 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/partne
 curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/subscribers
 ```
 
+## Contact list (CRM seed)
+
+The 2026-09 scan of old sign-in sheets was transcribed to `D:\ATA202\Scans\extracted\contacts.csv` (159 people, ~550 candidate addresses incl. permutations). **That file is PII and stays out of git.** Load it on the server:
+
+```bash
+scp -i 202.pem D:/ATA202/Scans/extracted/contacts.csv ubuntu@<host>:~/contacts.csv
+ssh -i 202.pem ubuntu@<host> 'cd ~/Tug202.Com/backend && node scripts/import-contacts.js ~/contacts.csv'
+```
+
+Then, with `$T` = admin token:
+
+```bash
+curl -H "Authorization: Bearer $T" "https://tug202.org/api/admin/contacts-list?status=unverified" | jq .
+curl -H "Authorization: Bearer $T" "https://tug202.org/api/admin/contacts-list/export.csv?status=unverified" -o send.csv
+curl -H "Authorization: Bearer $T" -H 'Content-Type: application/json' -d '{"emails":["a@b.com","c@d.com"]}' https://tug202.org/api/admin/contacts-list/bounces
+```
+
+Workflow for the first blast: export unverified → send from the mail tool → `mark-sent` the list → paste bounce addresses into `bounces` → the next export contains only survivors. Confirmed replies get `status=confirmed`.
+
 Notification emails go to `NOTIFY_EMAIL` once SMTP is configured in `backend/.env`; rows are saved to MySQL regardless.
 
 ## Deploying

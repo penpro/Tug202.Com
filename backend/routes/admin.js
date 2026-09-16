@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
+const contactsRouter = require('./contacts');
 
 // Read-only export of form submissions, protected by a static bearer token
 // from .env. Enough for a board secretary to pull the volunteer list with
@@ -26,6 +27,7 @@ function requireToken(req, res, next) {
 }
 
 router.use(requireToken);
+router.use(contactsRouter);
 
 router.get('/contacts', async (req, res, next) => {
   try {
