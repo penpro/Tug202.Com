@@ -87,6 +87,7 @@ export default function Ship() {
                   <tr><th>Breadth</th><td>{vessel.breadthFt} ft</td></tr>
                   <tr><th>Depth</th><td>{vessel.depthFt} ft</td></tr>
                   <tr><th>Gross tonnage</th><td>{vessel.grossTonsITC} GT (ITC)</td></tr>
+                  <tr><th>Net tonnage</th><td>{vessel.netTonsITC} NT (ITC)</td></tr>
                   <tr><th>Propulsion</th><td>Diesel-electric, twin original engines</td></tr>
                   <tr><th>Steering</th><td>Deck-tube chain rudder control (world record: last ship so equipped)</td></tr>
                   <tr><th>Status</th><td>Operational museum ship; gets underway under her own power</td></tr>

@@ -39,7 +39,7 @@ export function GrantsIndex() {
               <p>
                 Budgets are deliberately conservative: every project carries explicit contingency and
                 project-management lines so that a funded project gets delivered in full, with margin.
-                Line items are order-of-magnitude planning figures for a 133-foot steel vessel on Puget
+                Line items are order-of-magnitude planning figures for a 133.4-foot, 295-gross-ton steel vessel on Puget
                 Sound and are replaced with vendor quotes at application time. Partial funding is welcome
                 and combinable across funders; the budget tables show exactly what each dollar buys.
               </p>

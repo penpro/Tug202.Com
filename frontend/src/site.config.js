@@ -36,6 +36,7 @@ export const vessel = {
   breadthFt: 33.1,
   depthFt: 17.7,
   grossTonsITC: 295,
+  netTonsITC: 200,
   hailingPort: 'Seattle, Washington',
   // Secondary-source dates; primary Navy/Coast Guard records still to be pulled.
   launched: 'October 10, 1944',

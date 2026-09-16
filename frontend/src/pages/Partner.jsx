@@ -197,7 +197,7 @@ export default function Partner() {
               <span className="eyebrow">Donations &amp; mission support</span>
               <h2>Support, not fare</h2>
               <p>
-                Operating a 143-foot historic vessel is expensive. Fuel, moorage, maintenance,
+                Operating a 133-foot, 295-gross-ton historic vessel is expensive. Fuel, moorage, maintenance,
                 repairs, generators, sanitation, supplies, and other operating costs are substantial.
                 As a rule of thumb, it costs the Foundation about <strong>${costs.perMile} for every
                 mile Comanche travels</strong> and about <strong>${costs.perPierDay} for every day she
