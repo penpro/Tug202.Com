@@ -12,9 +12,9 @@ One command does everything (swap, nginx, MySQL, Node 22, pm2, clone, DB + gener
 ssh -i 202.pem ubuntu@<host> 'curl -fsSL https://raw.githubusercontent.com/penpro/Tug202.Com/main/ops/bootstrap.sh | bash'
 ```
 
-What it leaves behind: repo at `~/Tug202.Com`, `backend/.env` with a random DB password + `ADMIN_TOKEN` (printed at the end — save it), PM2 process `tug202-backend`, static site in `/var/www/tug202`, nginx serving on port 80 for `tug202.com` / `www.tug202.com`.
+What it leaves behind: repo at `~/Tug202.Com`, `backend/.env` with a random DB password + `ADMIN_TOKEN` (printed at the end — save it), PM2 process `tug202-backend`, static site in `/var/www/tug202`, nginx serving on port 80 for `tug202.org` / `www.tug202.org`.
 
-Sanity check before DNS: `curl -H "Host: tug202.com" http://<EC2-IP>/api/health` → `{"ok":true,"db":true}`.
+Sanity check before DNS: `curl -H "Host: tug202.org" http://<EC2-IP>/api/health` → `{"ok":true,"db":true}`.
 
 ## 2. DNS + TLS
 
@@ -22,7 +22,7 @@ Sanity check before DNS: `curl -H "Host: tug202.com" http://<EC2-IP>/api/health`
    - `A     @    <EC2 elastic IP>`
    - `A     www  <EC2 elastic IP>`
    Use an **Elastic IP** so the record never has to change. Lower the TTL to 300 a day ahead if the old host allows it.
-2. Once `dig +short tug202.com` returns the EC2 IP:
+2. Once `dig +short tug202.org` returns the EC2 IP:
    ```bash
    ssh -i 202.pem ubuntu@<host> 'CERT_EMAIL=you@example.com ~/Tug202.Com/ops/enable-https.sh'
    ```
@@ -32,7 +32,7 @@ Sanity check before DNS: `curl -H "Host: tug202.com" http://<EC2-IP>/api/health`
 
 Two separate things:
 
-- **Inbound `info@tug202.com`** — set up at the DNS provider (Cloudflare Email Routing, ImprovMX, or Google Workspace). Not handled by this server.
+- **Inbound `info@tug202.org`** — set up at the DNS provider (Cloudflare Email Routing, ImprovMX, or Google Workspace). Not handled by this server.
 - **Outbound notifications** — fill `SMTP_*` and `NOTIFY_EMAIL` in `backend/.env`, then `pm2 restart tug202-backend --update-env`. Amazon SES in the same region is the cheap option; a Gmail app password works for low volume.
 
 Until SMTP is set, form submissions still land in MySQL and are visible via the `/api/admin/*` endpoints.
@@ -64,5 +64,5 @@ Put that in a cron with `find ~/backups -mtime +30 -delete`.
 ```bash
 pm2 logs tug202-backend --lines 100
 sudo tail -f /var/log/nginx/error.log
-curl -sI https://tug202.com | grep -iE 'strict|x-frame|content-security'
+curl -sI https://tug202.org | grep -iE 'strict|x-frame|content-security'
 ```

@@ -13,8 +13,8 @@ set -euo pipefail
 REPO_ROOT="${1:-$HOME/Tug202.Com}"
 SNIPPET_SRC="$REPO_ROOT/nginx/security-headers.conf"
 SNIPPET_DST="/etc/nginx/snippets/tug202-security-headers.conf"
-SITE_SRC="$REPO_ROOT/nginx/tug202.com.conf"
-SITE_DST="/etc/nginx/sites-available/tug202.com"
+SITE_SRC="$REPO_ROOT/nginx/tug202.org.conf"
+SITE_DST="/etc/nginx/sites-available/tug202.org"
 changed=0
 
 if ! sudo cmp -s "$SNIPPET_SRC" "$SNIPPET_DST"; then
@@ -26,11 +26,11 @@ fi
 if [ ! -f "$SITE_DST" ]; then
   echo "==> Installing $SITE_DST"
   sudo cp "$SITE_SRC" "$SITE_DST"
-  sudo ln -sf "$SITE_DST" /etc/nginx/sites-enabled/tug202.com
+  sudo ln -sf "$SITE_DST" /etc/nginx/sites-enabled/tug202.org
   changed=1
 elif sudo grep -q "managed by Certbot" "$SITE_DST"; then
   if ! sudo cmp -s "$SITE_SRC" "$SITE_DST"; then
-    echo "==> nginx/tug202.com.conf differs from the certbot-managed live config; not overwriting. Merge by hand if intended."
+    echo "==> nginx/tug202.org.conf differs from the certbot-managed live config; not overwriting. Merge by hand if intended."
   fi
 elif ! sudo cmp -s "$SITE_SRC" "$SITE_DST"; then
   echo "==> Updating $SITE_DST"

@@ -6,7 +6,7 @@ const pool = require('../db');
 // from .env. Enough for a board secretary to pull the volunteer list with
 // curl; a real admin UI with sessions can replace this later.
 //
-//   curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.com/api/admin/volunteers
+//   curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/volunteers
 
 const router = express.Router();
 

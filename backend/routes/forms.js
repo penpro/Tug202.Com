@@ -26,7 +26,7 @@ router.post('/contact', async (req, res, next) => {
       [name, from, topic, message, req.ip]
     );
     notify(
-      `[tug202.com] Contact: ${topic || 'General'} — ${name}`,
+      `[tug202.org] Contact: ${topic || 'General'} — ${name}`,
       `From: ${name} <${from}>\nTopic: ${topic}\n\n${message}`,
       from
     );
@@ -57,7 +57,7 @@ router.post('/volunteer', async (req, res, next) => {
       [name, from, phone, interests, experience, availability, req.ip]
     );
     notify(
-      `[tug202.com] Volunteer signup — ${name}`,
+      `[tug202.org] Volunteer signup — ${name}`,
       `Name: ${name}\nEmail: ${from}\nPhone: ${phone}\nInterests: ${interests}\nAvailability: ${availability}\n\nExperience:\n${experience}`,
       from
     );
@@ -95,7 +95,7 @@ router.post('/partner', async (req, res, next) => {
       [orgName, contactName, from, phone, purpose, headcount, location, dates, mode, duration, accessibility, equipment, resources, req.ip]
     );
     notify(
-      `[tug202.com] Partnership inquiry — ${orgName}`,
+      `[tug202.org] Partnership inquiry — ${orgName}`,
       [
         `Organization: ${orgName}`, `Contact: ${contactName} <${from}> ${phone}`,
         `Participants: ${headcount}`, `Location: ${location}`, `Dates: ${dates}`,
@@ -150,7 +150,7 @@ router.post('/newsletter', async (req, res, next) => {
     const chosen = Object.entries(prefs).filter(([, v]) => v).map(([k]) => k).join(', ');
     if (prefs.volunteer || note) {
       notify(
-        `[tug202.com] List signup — ${name || from}`,
+        `[tug202.org] List signup — ${name || from}`,
         `Email: ${from}
 Name: ${name}
 Wants: ${chosen}

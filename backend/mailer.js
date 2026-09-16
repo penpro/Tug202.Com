@@ -18,7 +18,7 @@ if (process.env.SMTP_HOST) {
 
 async function notify(subject, text, replyTo) {
   const to = (process.env.NOTIFY_EMAIL || '').split(',').map(s => s.trim()).filter(Boolean);
-  const from = process.env.SMTP_FROM || 'no-reply@tug202.com';
+  const from = process.env.SMTP_FROM || 'no-reply@tug202.org';
   if (!transport || to.length === 0) {
     console.log(`[mail:skipped] to=${to.join(',') || '(none)'} subject=${subject}\n${text}`);
     return;

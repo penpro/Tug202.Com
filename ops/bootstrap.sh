@@ -99,7 +99,7 @@ SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-SMTP_FROM=no-reply@tug202.com
+SMTP_FROM=no-reply@tug202.org
 NOTIFY_EMAIL=
 ENV
   chmod 600 backend/.env
@@ -111,8 +111,8 @@ log "Running migrations"
 # ---- nginx ----------------------------------------------------------------
 log "nginx site config"
 sudo cp nginx/security-headers.conf /etc/nginx/snippets/tug202-security-headers.conf
-sudo cp nginx/tug202.com.conf /etc/nginx/sites-available/tug202.com
-sudo ln -sf /etc/nginx/sites-available/tug202.com /etc/nginx/sites-enabled/tug202.com
+sudo cp nginx/tug202.org.conf /etc/nginx/sites-available/tug202.org
+sudo ln -sf /etc/nginx/sites-available/tug202.org /etc/nginx/sites-enabled/tug202.org
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo mkdir -p "$WEB_ROOT"
 sudo nginx -t
@@ -131,8 +131,8 @@ pm2 save >/dev/null
 
 log "Smoke test"
 sleep 1
-curl -fsS -H "Host: tug202.com" http://127.0.0.1/api/health && echo
-curl -fsS -H "Host: tug202.com" http://127.0.0.1/ | grep -o '<title>[^<]*</title>'
+curl -fsS -H "Host: tug202.org" http://127.0.0.1/api/health && echo
+curl -fsS -H "Host: tug202.org" http://127.0.0.1/ | grep -o '<title>[^<]*</title>'
 
 echo ""
 echo "Bootstrap complete."

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Issue the Let's Encrypt certificate once DNS for tug202.com points here.
+# Issue the Let's Encrypt certificate once DNS for tug202.org points here.
 # Safe to re-run; certbot is idempotent and auto-renews via systemd timer.
 #
 # Usage (on the server):
 #   ~/Tug202.Com/ops/enable-https.sh
-#   DOMAINS="tug202.com www.tug202.com" ~/Tug202.Com/ops/enable-https.sh
+#   DOMAINS="tug202.org www.tug202.org" ~/Tug202.Com/ops/enable-https.sh
 
-DOMAINS="${DOMAINS:-tug202.com www.tug202.com}"
+DOMAINS="${DOMAINS:-tug202.org www.tug202.org}"
 EMAIL="${CERT_EMAIL:-}"
 
 if ! command -v certbot >/dev/null 2>&1; then

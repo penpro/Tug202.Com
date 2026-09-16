@@ -16,12 +16,12 @@ export const org = {
   city: 'Auburn, Washington',
   // TODO: confirm the public mailing address the board wants published.
   mailingAddress: null,
-  // TODO: confirm the public contact email once the tug202.com mailbox exists.
-  email: 'info@tug202.com',
+  // TODO: confirm the public contact email once the tug202.org mailbox exists.
+  email: 'info@tug202.org',
   // TODO: confirm whether the 1-888 line from the 2025 press release is still active.
   phone: null,
   facebook: 'https://www.facebook.com/tugcomanche', // TODO: confirm exact page URL
-  domain: 'tug202.com'
+  domain: 'tug202.org'
 }
 
 export const vessel = {

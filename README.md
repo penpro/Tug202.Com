@@ -1,4 +1,4 @@
-# tug202.com — Tug Comanche Historical Rescue Foundation
+# tug202.org — Tug Comanche Historical Rescue Foundation
 
 Public website for the Foundation and the historic tug **Comanche** (ATA-202 / USS Wampanoag / USCGC WMEC-202).
 
@@ -27,7 +27,7 @@ cd ../frontend && npm install && npm run dev         # :5173, proxies /api -> :3
 
 Search `frontend/src/site.config.js` for `TODO`:
 
-- **Contact email** — currently `info@tug202.com`; needs a real mailbox or forwarder.
+- **Contact email** — currently `info@tug202.org`; needs a real mailbox or forwarder.
 - **Phone** — the 1‑888 number from the 2025 press release is not published until confirmed active.
 - **Facebook URL** — confirm the page slug.
 - **Mailing address for checks** — not published until the board picks one (COD still lists the Bremerton address under the old name).
@@ -46,10 +46,10 @@ Content flagged `verify: true` in `frontend/src/content/index.js` (1959 Coast Gu
 ## Reading form submissions
 
 ```bash
-curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.com/api/admin/volunteers
-curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.com/api/admin/contacts
-curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.com/api/admin/partners
-curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.com/api/admin/subscribers
+curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/volunteers
+curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/contacts
+curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/partners
+curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/subscribers
 ```
 
 Notification emails go to `NOTIFY_EMAIL` once SMTP is configured in `backend/.env`; rows are saved to MySQL regardless.
