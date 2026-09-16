@@ -115,7 +115,7 @@ export const seedNews = [
     images: [
       { name: 'oly-anchor-work', caption: 'Working the fouled chain from the tender' },
       { name: 'oly-671-pump', caption: 'Water pump surgery on the 6-71 generator' },
-      { name: 'oly-rainbow', caption: 'A rainbow over the bow, seen from Valiant' }
+      { name: 'oly-rainbow', caption: 'A rainbow over the stern, seen from Valiant' }
     ],
     body: `When the Olympia Arts & Heritage Alliance called in late August, they asked a simple question: could Comanche be in Olympia in about a week? AHA was planning the Budd Inlet Six Commemorative Cruise for Saturday, September 5 — an invitation-only program revisiting the 1976 capture and release of six orcas in Budd Inlet, the event that helped turn public understanding of orcas from animals to be caught and displayed into intelligent, social, wild beings deserving protection, and contributed to the end of live captures in Washington and U.S. waters. They wanted the program to happen on the water where it happened. We said yes.
 
