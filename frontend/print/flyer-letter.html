@@ -1,0 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Tug Comanche donation flyer</title>
+<link rel="stylesheet" href="../node_modules/@fontsource/oswald/600.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/400.css">
+<link rel="stylesheet" href="../node_modules/@fontsource/source-sans-3/700.css">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  .page { width: 8.5in; height: 11in; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  .top { display: flex; align-items: center; gap: 0.18in; padding: 0.22in 0.6in; }
+  .top img { width: 0.75in; }
+  .top .name { font-size: 15pt; line-height: 1.05; }
+  .top .org { font-size: 9.5pt; opacity: 0.8; letter-spacing: 0.08em; text-transform: uppercase; }
+  .bar { height: 0.08in; }
+  .hero { position: relative; height: 4.1in; overflow: hidden; }
+  .hero img { width: 100%; height: 100%; object-fit: cover; object-position: center 55%; }
+  .hero .band { position: absolute; left: 0; right: 0; bottom: 0; padding: 0.5in 0.6in 0.4in; background: linear-gradient(180deg, rgba(7,21,40,0) 0%, rgba(7,21,40,0.92) 65%); color: #fff; }
+  .hero h1 { margin: 0; font-size: 42pt; line-height: 0.95; }
+  .hero h1 span { color: #c9a44c; }
+  .hero .sub { font-size: 12.5pt; margin-top: 8pt; opacity: 0.92; max-width: 6.2in; }
+  .body { flex: 1; display: grid; grid-template-columns: 1fr 2.9in; gap: 0.45in; padding: 0.38in 0.6in 0.25in; }
+  .body h2 { font-size: 25pt; margin: 0 0 9pt; color: #0b1f3a; line-height: 1; }
+  .body p { font-size: 11.2pt; line-height: 1.42; margin: 0 0 8pt; }
+  .costs { display: flex; gap: 0.25in; margin: 8pt 0 10pt; }
+  .cost { flex: 1; border-left: 4px solid #c9a44c; padding-left: 10pt; }
+  .cost .n { font-family: 'Oswald', sans-serif; font-size: 24pt; color: #0b1f3a; line-height: 1; }
+  .cost .l { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.1em; color: #7a8190; margin-top: 2pt; }
+  .qrbox { text-align: center; border: 3px solid #0b1f3a; border-radius: 10px; padding: 0.2in 0.15in 0.18in; align-self: start; }
+  .qrbox img { width: 2.3in; height: 2.3in; margin: 0 auto; }
+  .qrbox .scan { font-size: 20pt; color: #d9422b; margin-top: 6pt; }
+  .qrbox .url { font-size: 8.5pt; word-break: break-all; color: #4a5160; margin-top: 4pt; }
+  .qrbox .site { font-size: 11pt; font-weight: 700; color: #0b1f3a; margin-top: 4pt; }
+  .foot { padding: 0.16in 0.6in 0.22in; font-size: 8.4pt; line-height: 1.4; color: rgba(255,255,255,0.85); }
+  .foot strong { color: #fff; }
+</style></head>
+<body><div class="page">
+  <div class="top navy">
+    <img src="../public/images/crest.png" alt="">
+    <div>
+      <div class="display name">Tug Comanche Historical Rescue Foundation</div>
+      <div class="org">ATA-202 &middot; USS Wampanoag &middot; USCGC Comanche WMEC-202</div>
+    </div>
+  </div>
+  <div class="bar stripe"></div>
+  <div class="hero">
+    <img src="../public/images/hero-port-dazzle.jpg" alt="">
+    <div class="band">
+      <h1 class="display">Help keep <span>Comanche</span> underway</h1>
+      <div class="sub">One of the last WWII museum ships in the world still moving under her own power &mdash; crewed entirely by volunteers on Puget Sound.</div>
+    </div>
+  </div>
+  <div class="body">
+    <div>
+      <div class="eyebrow">Why it matters</div>
+      <h2 class="display">A living ship, not a static exhibit</h2>
+      <p>Built in 1944 as a Navy ocean tug and later a Coast Guard cutter, Comanche is today a floating classroom for maritime history, hands-on trades and youth mentorship &mdash; and she still gets underway for community events and partner cruises.</p>
+      <div class="costs">
+        <div class="cost"><div class="n">$100</div><div class="l">per mile underway</div></div>
+        <div class="cost"><div class="n">$250</div><div class="l">per day at the pier</div></div>
+      </div>
+      <p>Those are bare operating costs &mdash; fuel, moorage, consumables. Nothing in them for the maintenance, haul-out and insurance an 80-year-old ship needs. That is what your gift covers.</p>
+      <p><strong>Every dollar goes to the ship.</strong> Scan the code, or give at <strong>tug202.org</strong>.</p>
+    </div>
+    <div class="qrbox">
+      <img src="../public/donate/tug-comanche-donate-qr.svg" alt="QR code linking to the donation page">
+      <div class="display scan">Scan to give</div>
+      <div class="url">givebutter.com/support-ata-202-comanche-x0xpns</div>
+      <div class="site">tug202.org</div>
+    </div>
+  </div>
+  <div class="bar stripe"></div>
+  <div class="foot navy">
+    <strong>Tug Comanche Historical Rescue Foundation</strong> is a Washington 501(c)(3) public charity, EIN 39-5018917. Contributions are tax-deductible to the extent allowed by law. Donations are always voluntary and never a condition of coming aboard; Comanche is not a charter vessel and does not offer paid passenger service. &nbsp;&middot;&nbsp; tug202.org &nbsp;&middot;&nbsp; info@tug202.org
+  </div>
+</div></body></html>

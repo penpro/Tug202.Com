@@ -3,8 +3,8 @@ import Hero from '../components/Hero.jsx'
 import Photo from '../components/Photo.jsx'
 import Seo from '../components/Seo.jsx'
 import SignupForm from '../components/SignupForm.jsx'
-import { org, donate, costs } from '../site.config.js'
-import { GivebutterForm, givebutterConfigured } from '../components/Givebutter.jsx'
+import { org, donate, costs, givebutter, donateAssets } from '../site.config.js'
+import { GivebutterWidget, GivebutterForm, givebutterConfigured } from '../components/Givebutter.jsx'
 import { wishlist } from '../content/index.js'
 
 export default function Support() {
@@ -29,10 +29,21 @@ export default function Support() {
                 <h3>One-time or monthly</h3>
                 {givebutterConfigured() ? (
                   <>
-                    <GivebutterForm />
+                    {givebutter.widgets?.givingForm
+                      ? <div className="gb-embed"><GivebutterWidget id={givebutter.widgets.givingForm} /></div>
+                      : <GivebutterForm />}
                     <p className="small" style={{ marginTop: 12 }}>
                       Form not loading? <a href={donate.onlineUrl} target="_blank" rel="noreferrer">Give on our Givebutter page</a> instead.
                     </p>
+                  </>
+                ) : donate.onlineUrl ? (
+                  <>
+                    <p>
+                      Secure online giving through Givebutter &mdash; card, bank, Apple&nbsp;Pay,
+                      Google&nbsp;Pay, Venmo or PayPal. One-time or monthly.
+                    </p>
+                    <a className="btn btn-primary" href={donate.onlineUrl} target="_blank" rel="noreferrer">Donate now</a>
+                    <p className="small" style={{ marginTop: 12 }}>Opens givebutter.com in a new tab.</p>
                   </>
                 ) : (
                   <>
@@ -109,6 +120,36 @@ export default function Support() {
             </div>
             <Photo name="overhead-raft" alt="Overhead view of Comanche's decks and superstructure" />
           </div>
+        </div>
+      </section>
+
+      <section className="section" id="print">
+        <div className="container">
+          <span className="eyebrow">Print &amp; share</span>
+          <h2>Donation kit</h2>
+          <p className="lead" style={{ maxWidth: 760 }}>
+            Ready-to-print pieces with the giving QR code, so nobody has to rebuild them for
+            every event. Download, print, done.
+          </p>
+          <div className="grid grid-3" style={{ marginTop: 24 }}>
+            {donateAssets.map(a => (
+              <div className="card" key={a.file}>
+                <a href={`/donate/${a.preview}`} target="_blank" rel="noreferrer" style={{ background: '#fff', borderBottom: '1px solid var(--line)' }}>
+                  <img src={`/donate/${a.preview}`} alt={`Preview of ${a.title}`} loading="lazy" style={{ aspectRatio: '4 / 3', objectFit: 'contain', padding: 12 }} />
+                </a>
+                <div className="card-body">
+                  <h3>{a.title}</h3>
+                  <p>{a.text}</p>
+                  <a className="btn btn-outline" href={`/donate/${a.file}`} download style={{ marginTop: 8 }}>Download</a>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="small" style={{ marginTop: 18 }}>
+            Also: <a href="/donate/tug-comanche-donate-qr.svg" download>QR code as SVG</a> (scales to any size) &middot;
+            the code links to <a href={donate.onlineUrl} target="_blank" rel="noreferrer">{donate.onlineUrl?.replace('https://', '')}</a>.
+            Board members: the source templates live in <code>frontend/print/</code> in the site repo; edit and re-run the build script to regenerate everything.
+          </p>
         </div>
       </section>
 

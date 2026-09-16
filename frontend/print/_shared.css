@@ -1,0 +1,14 @@
+/* Shared print styles. Colors mirror the site palette. */
+@page { margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Source Sans 3', 'Segoe UI', Arial, sans-serif;
+  color: #1a1f2b; background: #fff;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.display { font-family: 'Oswald', 'Arial Narrow', Impact, sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+.navy { background: #0b1f3a; color: #fff; }
+.stripe { background: #d9422b; }
+.eyebrow { font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 0.2em; font-size: 10pt; color: #d9422b; }
+img { display: block; }

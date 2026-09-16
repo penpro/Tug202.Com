@@ -11,7 +11,7 @@ const SCRIPT_ID = 'givebutter-widgets'
 function useGivebutterScript() {
   const [ready, setReady] = useState(() => !!document.getElementById(SCRIPT_ID)?.dataset.loaded)
   useEffect(() => {
-    if (!givebutter.campaign) return
+    if (!givebutter.accountId || !givebutter.campaign) return
     let s = document.getElementById(SCRIPT_ID)
     if (!s) {
       s = document.createElement('script')
@@ -30,7 +30,9 @@ function useGivebutterScript() {
   return ready
 }
 
-export const givebutterConfigured = () => !!givebutter.campaign
+// The inline widget needs BOTH ids (the library refuses to render without
+// ?acct=). With only the campaign set, callers should link to the campaign page.
+export const givebutterConfigured = () => !!(givebutter.accountId && givebutter.campaign)
 
 // Full giving form, embedded inline. Renders nothing when not configured so
 // the caller can show its own fallback.
@@ -50,4 +52,13 @@ export function GivebutterButton() {
   const ready = useGivebutterScript()
   if (!givebutterConfigured() || !ready) return null
   return <givebutter-button campaign={givebutter.campaign}></givebutter-button>
+}
+
+// A widget designed in the Givebutter dashboard (Campaign > Sharing > Widgets),
+// referenced by its widget id. Prefer these over the generic tags above when a
+// styled one exists, since edits in the dashboard show up without a deploy.
+export function GivebutterWidget({ id }) {
+  useGivebutterScript()
+  if (!givebutter.accountId || !id) return null
+  return <givebutter-widget id={id}></givebutter-widget>
 }

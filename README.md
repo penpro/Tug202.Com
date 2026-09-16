@@ -31,7 +31,7 @@ Search `frontend/src/site.config.js` for `TODO`:
 - **Phone** — the 1‑888 number from the 2025 press release is not published until confirmed active.
 - **Facebook URL** — confirm the page slug.
 - **Mailing address for checks** — not published until the board picks one (COD still lists the Bremerton address under the old name).
-- **Givebutter** — `givebutter.accountId` (Settings → Developers → Widgets) and `givebutter.campaign` (the slug in `givebutter.com/<campaign>`). Until both are set, the Support page shows check + "contact us" only. CSP already allows `*.givebutter.com`.
+- **Givebutter account ID** — `givebutter.accountId`: Settings → Developers → Widgets → "I use another platform" → the value after `?acct=` in the script line. Campaign code and widget IDs are already set. Until the account ID is in, the Support page links to the campaign page instead of embedding the form. CSP already allows `*.givebutter.com`.
 
 Framing: Comanche is an **operational** museum ship that gets underway under her own power and cruises through nonprofit partnerships; she is never a charter/for-hire vessel. Keep that distinction in any new copy.
 
@@ -41,6 +41,7 @@ Content flagged `verify: true` in `frontend/src/content/index.js` (1959 Coast Gu
 
 - **News posts** — insert rows into `news_posts` (see `db/migrations/002_seed_news.sql` for the shape). `/api/news` serves published rows; the frontend falls back to the bundled seed list if the API is down. Ship a new migration file for anything you want reproducible.
 - **Board roster, programs, volunteer roles, wishlist, timeline** — edit `frontend/src/content/index.js`, rebuild.
+- **Donation print kit** — templates in `frontend/print/` (flyer, 4×6 card, QR). Edit, then `cd frontend && node scripts/build-print-assets.cjs` (needs a local puppeteer; see the script header) and commit the regenerated files in `frontend/public/donate/`. The Support page lists whatever `donateAssets` in `site.config.js` points at.
 - **Photos** — drop web-sized `.jpg` + `.webp` pairs into `frontend/public/images/` and reference by basename via `<Photo name="..."/>`. Source drone stills live in `D:\ATA202\Media\DroneVideo`.
 
 ## Reading form submissions

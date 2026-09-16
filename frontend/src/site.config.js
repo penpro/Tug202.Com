@@ -56,12 +56,29 @@ export const costs = {
 // Givebutter. Both values come from the Givebutter dashboard:
 //   campaign  - the campaign code = the slug in https://givebutter.com/<campaign>
 //   accountId - Settings > Integrations > Widgets section (looks like "GQ0CYPreD923uMBv").
-//               Optional: the widget library loads without it; set it if
-//               Givebutter ever requires it or for account-level widgets.
+//               REQUIRED for the inline giving form (the library logs
+//               "Account attribute is required" without it). Until it is set,
+//               the Support page links out to the campaign page instead.
 export const givebutter = {
-  accountId: null, // TODO: paste from Settings > Integrations if needed
-  campaign: 'support-ata-202-comanche-x0xpns'
+  // TODO: Settings > Developers > Widgets > "I use another platform" > copy the
+  // value after ?acct= in the <script> line. Nothing renders inline without it.
+  accountId: null,
+  campaign: 'support-ata-202-comanche-x0xpns',
+  // Dashboard-created widgets (Campaign > Sharing > Widgets). Rendered with
+  // <givebutter-widget id="..."> once accountId is set.
+  widgets: {
+    donateButton: 'gOKK8D',   // "Donate" button that opens checkout in a modal
+    givingForm: 'Lqbb3J'      // one-time / monthly giving form
+  }
 }
+
+// Printable / shareable donation assets, served from /donate/. Regenerate with
+// `node scripts/build-print-assets.cjs` after editing print/*.html.
+export const donateAssets = [
+  { file: 'tug-comanche-donate-flyer-letter.pdf', preview: 'tug-comanche-donate-flyer-letter.png', title: 'Letter flyer (8.5 × 11)', text: 'Full-page flyer with the ship, why it matters, cost figures and the QR code. Print on plain paper for tables, bulletin boards and open-ship days.' },
+  { file: 'tug-comanche-donate-card-4x6.pdf', preview: 'tug-comanche-donate-card-4x6.png', title: 'Table card (4 × 6)', text: 'Postcard-size. Prints two-up on letter or on 4×6 card stock for galley tables, the brow and event booths.' },
+  { file: 'tug-comanche-donate-qr.png', preview: 'tug-comanche-donate-qr.png', title: 'QR code (PNG, 1200 px)', text: 'Just the code, for slides, social posts, signage and newsletters. SVG also available below.' }
+]
 
 export const donate = {
   // Public campaign page, derived from the campaign code above. Used as the
