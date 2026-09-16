@@ -39,6 +39,7 @@ export default function Footer() {
               <li><a href={`mailto:${org.email}`}>{org.email}</a></li>
               {org.phone && <li><a href={`tel:${org.phone}`}>{org.phone}</a></li>}
               <li><a href={org.facebook} target="_blank" rel="noreferrer">Facebook</a></li>
+              <li><a href={org.youtube} target="_blank" rel="noreferrer">YouTube</a></li>
             </ul>
             <p className="small" style={{ marginTop: 14 }}>
               Comanche cruises in partnership with other nonprofits and community organizations.
@@ -48,7 +49,7 @@ export default function Footer() {
         </div>
         <div className="footer-bottom">
           <span>&copy; {new Date().getFullYear()} {org.name}. All rights reserved.</span>
-          <span>Official No. {vessel.officialNumber} &middot; Hailing port {vessel.hailingPort}</span>
+          <span><a href={org.facebook} target="_blank" rel="noreferrer">Facebook</a> &middot; <a href={org.youtube} target="_blank" rel="noreferrer">YouTube</a> &middot; Official No. {vessel.officialNumber} &middot; Hailing port {vessel.hailingPort}</span>
         </div>
       </div>
     </footer>

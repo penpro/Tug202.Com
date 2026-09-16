@@ -34,7 +34,7 @@ export default function Visit() {
                 <p style={{ marginBottom: 0 }}>
                   Comanche&rsquo;s berth changes with the season and with moorage availability. Before
                   you travel, check the <Link to="/news">news page</Link> or our{' '}
-                  <a href={org.facebook} target="_blank" rel="noreferrer">Facebook page</a> for the next
+                  <a href={org.facebook} target="_blank" rel="noreferrer">Facebook page</a> or <a href={org.youtube} target="_blank" rel="noreferrer">YouTube channel</a> for the next
                   open-ship date, or <Link to="/contact">send us a note</Link>.
                 </p>
               </div>

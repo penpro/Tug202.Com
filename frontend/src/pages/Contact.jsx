@@ -47,7 +47,8 @@ export default function Contact() {
                 <tbody>
                   <tr><th>Email</th><td><a href={`mailto:${org.email}`}>{org.email}</a></td></tr>
                   {org.phone && <tr><th>Phone</th><td><a href={`tel:${org.phone}`}>{org.phone}</a></td></tr>}
-                  <tr><th>Facebook</th><td><a href={org.facebook} target="_blank" rel="noreferrer">Tug Comanche on Facebook</a></td></tr>
+                  <tr><th>Facebook</th><td><a href={org.facebook} target="_blank" rel="noreferrer">facebook.com/uscgccomanche</a></td></tr>
+                  <tr><th>YouTube</th><td><a href={org.youtube} target="_blank" rel="noreferrer">youtube.com/@TugComanche</a></td></tr>
                   <tr><th>Organization</th><td>{org.name}<br /><span className="small">EIN {org.ein} &middot; {org.city}</span></td></tr>
                 </tbody>
               </table>

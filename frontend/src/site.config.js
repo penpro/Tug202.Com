@@ -20,7 +20,8 @@ export const org = {
   email: 'info@tug202.org',
   // TODO: confirm whether the 1-888 line from the 2025 press release is still active.
   phone: null,
-  facebook: 'https://www.facebook.com/tugcomanche', // TODO: confirm exact page URL
+  facebook: 'https://www.facebook.com/uscgccomanche',
+  youtube: 'https://www.youtube.com/@TugComanche',
   domain: 'tug202.org'
 }
 

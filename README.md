@@ -29,7 +29,6 @@ Search `frontend/src/site.config.js` for `TODO`:
 
 - **Contact email** — currently `info@tug202.org`; needs a real mailbox or forwarder.
 - **Phone** — the 1‑888 number from the 2025 press release is not published until confirmed active.
-- **Facebook URL** — confirm the page slug.
 - **Mailing address for checks** — not published until the board picks one (COD still lists the Bremerton address under the old name).
 - **Givebutter account ID** — `givebutter.accountId`: Settings → Developers → Widgets → "I use another platform" → the value after `?acct=` in the script line. Campaign code and widget IDs are already set. Until the account ID is in, the Support page links to the campaign page instead of embedding the form. CSP already allows `*.givebutter.com`.
 
