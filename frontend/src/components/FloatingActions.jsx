@@ -10,6 +10,7 @@ export default function FloatingActions() {
   const [open, setOpen] = useState(false)
   const closeBtn = useRef(null)
   const { pathname } = useLocation()
+  const hidden = pathname.startsWith('/admin')
 
   // Close on route change and on Escape; lock body scroll while open.
   useEffect(() => { setOpen(false) }, [pathname])
@@ -22,6 +23,7 @@ export default function FloatingActions() {
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
   }, [open])
 
+  if (hidden) return null
   return (
     <>
       <div className="fab-cluster" aria-label="Quick actions">

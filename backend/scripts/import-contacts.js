@@ -37,7 +37,6 @@ function tagsFor(c) {
   if (ev.includes('port townsend') || ev.includes('port hadlock')) t.push('pt-local');
   if (ev.includes('usn') || ev.includes('navy')) t.push('navy');
   if (notes.includes('business') || notes.includes('productions')) t.push('business');
-  if (c.optin === 'yes') t.push('optin');
   return t.join(',');
 }
 

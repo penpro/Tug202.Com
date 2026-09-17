@@ -160,7 +160,7 @@ function Person({ p, token, open, onToggle, onChange, onDelete, act }) {
         <div className="admin-name">
           <strong>{p.name || <em>unnamed</em>}</strong>
           {p.optin && <span className="pill" style={{ background: '#1f6b2a' }}>opt-in</span>}
-          {p.tags && p.tags.split(',').map(tg => <span className="pill" key={tg}>{tg}</span>)}
+          {p.tags && p.tags.split(',').filter(tg => tg && tg !== 'optin').map(tg => <span className="pill" key={tg}>{tg}</span>)}
           <div className="small">{[p.city, p.event, p.event_date].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="admin-email small">
