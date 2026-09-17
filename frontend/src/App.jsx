@@ -11,6 +11,7 @@ import { GrantsIndex, GrantDetail } from './pages/Grants.jsx'
 import Support from './pages/Support.jsx'
 import Contact from './pages/Contact.jsx'
 import NotFound from './pages/NotFound.jsx'
+import Admin from './pages/Admin.jsx'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="support" element={<Support />} />
         <Route path="donate" element={<Support />} />
         <Route path="contact" element={<Contact />} />
+        <Route path="admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

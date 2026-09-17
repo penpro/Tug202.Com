@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
 const contactsRouter = require('./contacts');
+const peopleRouter = require('./people');
 
 // Read-only export of form submissions, protected by a static bearer token
 // from .env. Enough for a board secretary to pull the volunteer list with
@@ -14,7 +15,7 @@ const router = express.Router();
 function requireToken(req, res, next) {
   const expected = process.env.ADMIN_TOKEN || '';
   const header = req.get('authorization') || '';
-  const given = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const given = header.startsWith('Bearer ') ? header.slice(7) : String(req.query.token || '');
   if (!expected || /replace-me/.test(expected)) {
     return res.status(503).json({ error: 'ADMIN_TOKEN is not configured.' });
   }
@@ -28,6 +29,7 @@ function requireToken(req, res, next) {
 
 router.use(requireToken);
 router.use(contactsRouter);
+router.use(peopleRouter);
 
 router.get('/contacts', async (req, res, next) => {
   try {
