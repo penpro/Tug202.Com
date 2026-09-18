@@ -7,7 +7,7 @@ Same shape as the other EC2 projects: Vite/React frontend served as static files
 ```
 frontend/   Vite + React 18 + react-router. Content lives in src/content/, facts in src/site.config.js
 backend/    Express on :3202 — /api/contact, /api/volunteer, /api/partner, /api/newsletter, /api/news, /api/admin/*
-db/         init.sql (one-time), migrate.sh + migrations/ (rerunnable)
+db/         migrate.sh + migrations/ (rerunnable; DB + user are created by ops/bootstrap.sh)
 nginx/      site config + security-headers snippet
 ops/        EC2 setup + domain cutover runbook
 deploy_*.sh Run on the server after git pull (all / nginx / backend / frontend)

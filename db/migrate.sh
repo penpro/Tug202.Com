@@ -22,7 +22,7 @@ if ! command -v mysql >/dev/null 2>&1; then
 fi
 
 if ! sudo mysql -Nse "SHOW DATABASES LIKE '$DB_NAME';" | grep -q "$DB_NAME"; then
-  echo "Database '$DB_NAME' does not exist. Run: sudo mysql < db/init.sql" >&2
+  echo "Database '$DB_NAME' does not exist. Run ops/bootstrap.sh first." >&2
   exit 1
 fi
 
