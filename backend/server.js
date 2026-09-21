@@ -53,7 +53,9 @@ app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeader
 const formLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 10,
-  skip: (req) => !!req.session?.user,
+  // Count only the four public POST forms; everything else on /api (admin,
+  // news, unsubscribe) passes through this mount untouched.
+  skip: (req) => !!req.session?.user || req.method !== 'POST' || !/^\/(contact|volunteer|partner|newsletter)$/.test(req.path),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many submissions from this address. Please try again later or email us directly.' }
