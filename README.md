@@ -56,6 +56,18 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/partne
 curl -H "Authorization: Bearer $ADMIN_TOKEN" https://tug202.org/api/admin/subscribers
 ```
 
+## Board portal (`/admin`)
+
+Session-based logins (bcrypt + MySQL sessions). Roles: **admin** (everything, incl. Users) and **editor** (inbox, contacts, news). Access is by invite link — an admin adds an email on the Users tab and gets a one-time setup link to hand over (auto-emailed once SMTP is configured). Lost password → admin clicks "reset link" on that user.
+
+First admin, on the server:
+
+```bash
+cd ~/Tug202.Com/backend && node scripts/create-admin.js you@example.com "Your Name"
+```
+
+It prints a setup link; open it, set a password, done. The old `ADMIN_TOKEN` bearer still works for curl scripts.
+
 ## Contact list (CRM seed)
 
 The 2026-09 scan of old sign-in sheets was transcribed to `D:\ATA202\Scans\extracted\contacts.csv` (159 people, ~550 candidate addresses incl. permutations). **That file is PII and stays out of git.** Load it on the server:

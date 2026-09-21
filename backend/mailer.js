@@ -30,4 +30,14 @@ async function notify(subject, text, replyTo) {
   }
 }
 
-module.exports = { notify };
+// Direct mail to one recipient (invites, resets). Returns true only if it
+// went out over SMTP; false means the caller must hand the content over some
+// other way (the UI shows the link).
+async function send(to, subject, text) {
+  const from = process.env.SMTP_FROM || 'no-reply@tug202.org';
+  if (!transport) { console.log(`[mail:skipped] to=${to} subject=${subject}`); return false; }
+  try { await transport.sendMail({ from, to, subject, text }); return true; }
+  catch (err) { console.error('[mail:error]', err.message); return false; }
+}
+
+module.exports = { notify, send };

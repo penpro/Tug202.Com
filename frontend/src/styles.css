@@ -366,3 +366,22 @@ code { word-break: break-all; }
 .linkbtn { background: none; border: 0; color: var(--navy-600); cursor: pointer; font: inherit; font-size: 0.82rem; text-decoration: underline; padding: 0; }
 .linkbtn.danger { color: var(--stripe-dark); }
 @media (max-width: 760px) { .admin-row { grid-template-columns: 1fr auto; } .admin-row .admin-email { grid-column: 1 / -1; } .admin-detail { grid-template-columns: 1fr; } }
+
+/* ---- Portal shell ---------------------------------------------------------- */
+.admin-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 2px solid var(--navy-800); margin: 14px 0 22px; }
+.admin-tabs a { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.85rem; padding: 8px 14px; color: var(--ink-2); text-decoration: none; border-radius: 4px 4px 0 0; }
+.admin-tabs a:hover { background: rgba(11,31,58,0.06); color: var(--navy-800); }
+.admin-tabs a.active { background: var(--navy-800); color: #fff; }
+.admin-subtabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 14px; }
+.admin-subtabs button { font: inherit; font-size: 0.9rem; padding: 6px 12px; border: 1px solid var(--line); background: #fff; border-radius: 999px; cursor: pointer; color: var(--ink-2); }
+.admin-subtabs button.on { background: var(--navy-800); color: #fff; border-color: var(--navy-800); }
+.admin-msg { border-bottom: 1px solid var(--line); background: #fff; }
+.admin-msg summary { display: flex; gap: 12px; align-items: center; padding: 10px 12px; cursor: pointer; list-style: none; }
+.admin-msg summary::-webkit-details-marker { display: none; }
+.admin-msg summary:hover { background: rgba(11,31,58,0.04); }
+.admin-msg[open] { background: var(--paper); }
+.admin-msg-body { padding: 4px 12px 14px 12px; }
+.admin-kv { display: grid; grid-template-columns: 120px 1fr; gap: 8px; padding: 4px 0; font-size: 0.93rem; border-top: 1px dotted var(--line); }
+.admin-kv > span { color: var(--ink-3); font-weight: 600; }
+@media (max-width: 620px) { .admin-kv { grid-template-columns: 1fr; } .admin-msg summary { flex-wrap: wrap; gap: 6px; } }

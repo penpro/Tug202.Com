@@ -82,6 +82,7 @@ fi
 if [ ! -f backend/.env ]; then
   log "Writing backend/.env with generated secrets"
   ADMIN_TOKEN="$(openssl rand -hex 32)"
+  SESSION_SECRET="$(openssl rand -hex 48)"
   cat > backend/.env <<ENV
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -93,6 +94,8 @@ PORT=3202
 NODE_ENV=production
 
 ADMIN_TOKEN=$ADMIN_TOKEN
+SESSION_SECRET=$SESSION_SECRET
+APP_BASE_URL=https://tug202.org
 
 # Fill these in to enable outbound notification mail (see ops/README.md).
 SMTP_HOST=

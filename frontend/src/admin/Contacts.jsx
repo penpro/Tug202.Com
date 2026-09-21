@@ -1,47 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
-import Seo from '../components/Seo.jsx'
+import { useEffect, useState } from 'react'
+import { api } from './api.js'
 
-// ---------------------------------------------------------------------------
-// /admin — board-only contact CMS. Not linked from the nav; robots disallowed.
-// Auth is the ADMIN_TOKEN bearer secret kept in sessionStorage. Until the
-// site has HTTPS that token crosses the wire in the clear, exactly like the
-// curl usage does; real logins replace this once the certificate is in.
-// ---------------------------------------------------------------------------
+// Contacts (CRM) tab of the portal. One row per person; candidate addresses
+// nested under them with per-address status.
 
 const STATUSES = ['unverified', 'sent', 'bounced', 'confirmed', 'unsubscribed']
 const STATUS_COLOR = { unverified: '#7a8190', sent: '#1d4278', bounced: '#b8321f', confirmed: '#1f6b2a', unsubscribed: '#555' }
 const KIND_LABEL = { primary: 'primary', alternate: 'alt', permutation: 'guess' }
 
-function useToken() {
-  const [token, setTokenState] = useState(() => { try { return sessionStorage.getItem('tug202_admin') || '' } catch { return '' } })
-  const setToken = (t) => { setTokenState(t); try { t ? sessionStorage.setItem('tug202_admin', t) : sessionStorage.removeItem('tug202_admin') } catch {} }
-  return [token, setToken]
-}
-
-async function api(token, path, opts = {}) {
-  const res = await fetch('/api/admin' + path, {
-    ...opts,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
-    body: opts.body ? JSON.stringify(opts.body) : undefined
-  })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-  return data
-}
-
-export default function Admin() {
-  const [token, setToken] = useToken()
-  const [draft, setDraft] = useState('')
+export default function Contacts() {
   const [err, setErr] = useState('')
   const [data, setData] = useState(null)
   const [filters, setFilters] = useState({ q: '', tag: '', status: '', optin: false })
-  const [open, setOpen] = useState(null)      // expanded person id
+  const [open, setOpen] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [bulk, setBulk] = useState('')        // pasted bounce list
+  const [bulk, setBulk] = useState('')
   const [adding, setAdding] = useState(false)
 
   const load = async () => {
-    if (!token) return
     setBusy(true); setErr('')
     try {
       const qs = new URLSearchParams()
@@ -49,57 +25,34 @@ export default function Admin() {
       if (filters.tag) qs.set('tag', filters.tag)
       if (filters.status) qs.set('status', filters.status)
       if (filters.optin) qs.set('optin', '1')
-      setData(await api(token, '/people?' + qs.toString()))
-    } catch (e) {
-      setErr(e.message); if (/401|Unauthorized/.test(e.message)) setToken('')
-    } finally { setBusy(false) }
+      setData(await api('/admin/people?' + qs.toString()))
+    } catch (e) { setErr(e.message) } finally { setBusy(false) }
   }
-  useEffect(() => { load() }, [token, filters.tag, filters.status, filters.optin]) // eslint-disable-line
+  useEffect(() => { load() }, [filters.tag, filters.status, filters.optin]) // eslint-disable-line
 
-  // Replace one person in the list after an edit without a full reload.
   const patchPerson = (p) => setData(d => ({ ...d, people: d.people.map(x => x.id === p.id ? p : x) }))
-
   const act = async (fn) => { setBusy(true); setErr(''); try { await fn() } catch (e) { setErr(e.message) } finally { setBusy(false) } }
 
   const markBulk = (status) => act(async () => {
     const emails = bulk.split(/[\s,;]+/).map(s => s.trim().toLowerCase()).filter(s => s.includes('@'))
     if (!emails.length) return
-    const path = status === 'bounced' ? '/contacts-list/bounces' : '/contacts-list/mark-sent'
-    const r = await api(token, path, { method: 'POST', body: { emails } })
+    const path = status === 'bounced' ? '/admin/contacts-list/bounces' : '/admin/contacts-list/mark-sent'
+    const r = await api(path, { method: 'POST', body: { emails } })
     setBulk(''); await load()
     setErr(`${r.updated} address${r.updated === 1 ? '' : 'es'} marked ${status}`)
   })
 
-  if (!token) {
-    return (
-      <section className="section"><div className="container" style={{ maxWidth: 480 }}>
-        <Seo title="Admin" />
-        <span className="eyebrow">Board only</span>
-        <h1 style={{ fontSize: '2rem' }}>Contact CMS</h1>
-        <p className="small">Paste the admin token from <code>backend/.env</code> on the server. It stays in this browser tab only.</p>
-        <form className="form" onSubmit={e => { e.preventDefault(); setToken(draft.trim()) }}>
-          <div><label htmlFor="tok">Admin token</label><input id="tok" type="password" value={draft} onChange={e => setDraft(e.target.value)} autoComplete="off" /></div>
-          {err && <div className="form-msg err">{err}</div>}
-          <div><button className="btn btn-primary" type="submit">Open</button></div>
-        </form>
-      </div></section>
-    )
-  }
-
   const t = data?.totals
-  const exportUrl = (extra) => `/api/admin/contacts-list/export.csv?token=${encodeURIComponent(token)}${extra}`
+  const exportUrl = (extra) => `/api/admin/contacts-list/export.csv?x=1${extra}`
 
   return (
-    <section className="section" style={{ paddingTop: 36 }}><div className="container">
-      <Seo title="Contact CMS" />
+    <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
-        <div><span className="eyebrow">Board only</span><h1 style={{ fontSize: '2rem', marginBottom: 4 }}>Contacts</h1></div>
+        <h2 style={{ fontSize: '1.6rem', marginBottom: 4 }}>Contacts</h2>
         <div className="small">
           {t && <>{t.people} people · {t.emails} addresses · {STATUSES.map(s => t.byStatus[s] ? <span key={s} style={{ marginLeft: 10, color: STATUS_COLOR[s] }}>{t.byStatus[s]} {s}</span> : null)}</>}
-          <button className="btn btn-outline" style={{ marginLeft: 16, padding: '4px 10px', fontSize: '0.75rem' }} onClick={() => setToken('')}>Lock</button>
         </div>
       </div>
-
       {/* Filters */}
       <div className="admin-bar">
         <input placeholder="Search name, city, event, email…" value={filters.q} onChange={e => setFilters(f => ({ ...f, q: e.target.value }))} onKeyDown={e => e.key === 'Enter' && load()} />
@@ -114,7 +67,7 @@ export default function Admin() {
         <button className="btn btn-primary" onClick={() => setAdding(a => !a)}>+ Person</button>
       </div>
 
-      {adding && <NewPerson token={token} onDone={(p) => { setAdding(false); setData(d => ({ ...d, people: [p, ...d.people] })); setOpen(p.id) }} onErr={setErr} />}
+      {adding && <NewPerson onDone={(p) => { setAdding(false); setData(d => ({ ...d, people: [p, ...d.people] })); setOpen(p.id) }} onErr={setErr} />}
 
       {/* Bulk bounce / sent */}
       <details className="admin-bulk">
@@ -133,26 +86,26 @@ export default function Admin() {
       {/* People */}
       <div className="admin-list">
         {(data?.people || []).map(p => (
-          <Person key={p.id} p={p} token={token} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} onChange={patchPerson}
+          <Person key={p.id} p={p} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} onChange={patchPerson}
                   onDelete={() => setData(d => ({ ...d, people: d.people.filter(x => x.id !== p.id) }))} act={act} />
         ))}
         {data && !data.people.length && <p className="small">No matches.</p>}
       </div>
-    </div></section>
+    </div>
   )
 }
 
-function Person({ p, token, open, onToggle, onChange, onDelete, act }) {
+function Person({ p, open, onToggle, onChange, onDelete, act }) {
   const primary = p.emails.find(e => e.kind === 'primary') || p.emails[0]
   const live = p.emails.filter(e => e.status !== 'bounced' && e.status !== 'unsubscribed').length
   const [edit, setEdit] = useState(null)
   const [newEmail, setNewEmail] = useState('')
 
-  const save = () => act(async () => { onChange(await api(token, `/people/${p.id}`, { method: 'PATCH', body: edit })); setEdit(null) })
-  const setEmail = (id, body) => act(async () => onChange(await api(token, `/emails/${id}`, { method: 'PATCH', body })))
-  const delEmail = (id) => act(async () => onChange(await api(token, `/emails/${id}`, { method: 'DELETE' })))
-  const addEmail = () => act(async () => { onChange(await api(token, `/people/${p.id}/emails`, { method: 'POST', body: { email: newEmail, kind: 'alternate' } })); setNewEmail('') })
-  const remove = () => { if (confirm(`Delete ${p.name} and all ${p.emails.length} addresses?`)) act(async () => { await api(token, `/people/${p.id}`, { method: 'DELETE' }); onDelete() }) }
+  const save = () => act(async () => { onChange(await api(`/admin/people/${p.id}`, { method: 'PATCH', body: edit })); setEdit(null) })
+  const setEmail = (id, body) => act(async () => onChange(await api(`/admin/emails/${id}`, { method: 'PATCH', body })))
+  const delEmail = (id) => act(async () => onChange(await api(`/admin/emails/${id}`, { method: 'DELETE' })))
+  const addEmail = () => act(async () => { onChange(await api(`/admin/people/${p.id}/emails`, { method: 'POST', body: { email: newEmail, kind: 'alternate' } })); setNewEmail('') })
+  const remove = () => { if (confirm(`Delete ${p.name} and all ${p.emails.length} addresses?`)) act(async () => { await api(`/admin/people/${p.id}`, { method: 'DELETE' }); onDelete() }) }
 
   return (
     <div className={`admin-person${open ? ' open' : ''}`}>
@@ -228,10 +181,10 @@ function Person({ p, token, open, onToggle, onChange, onDelete, act }) {
   )
 }
 
-function NewPerson({ token, onDone, onErr }) {
+function NewPerson({ onDone, onErr }) {
   const [f, setF] = useState({ name: '', email: '', city: '', event: '', tags: '', notes: '', optin: true })
   const set = k => e => setF(x => ({ ...x, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
-  const submit = async (e) => { e.preventDefault(); try { onDone(await api(token, '/people', { method: 'POST', body: { ...f, source: 'manual' } })) } catch (er) { onErr(er.message) } }
+  const submit = async (e) => { e.preventDefault(); try { onDone(await api('/admin/people', { method: 'POST', body: { ...f, source: 'manual' } })) } catch (er) { onErr(er.message) } }
   return (
     <form className="form admin-new" onSubmit={submit} style={{ maxWidth: 'none' }}>
       <div className="row">
