@@ -30,7 +30,8 @@ aws sesv2 get-configuration-set --configuration-set-name "$SET" >/dev/null 2>&1 
 echo "   ok"
 
 echo "== event destination (bounces + complaints -> SNS)"
-if aws sesv2 get-configuration-set-event-destinations --configuration-set-name "$SET" --query "EventDestinations[?Name=='sns']" --output text | grep -q .; then
+N=$(aws sesv2 get-configuration-set-event-destinations --configuration-set-name "$SET" --query "length(EventDestinations[?Name=='sns'])" --output text)
+if [ "$N" != "0" ] && [ "$N" != "None" ] && [ -n "$N" ]; then
   echo "   exists"
 else
   aws sesv2 create-configuration-set-event-destination --configuration-set-name "$SET" --event-destination-name sns \
