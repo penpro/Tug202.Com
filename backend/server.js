@@ -47,7 +47,9 @@ app.use(session({
 }));
 
 // Generous global cap, tighter cap on the write endpoints.
-app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false }));
+// Site-wide ceiling for anonymous traffic; signed-in portal users are exempt
+// (the blast page polls while a send is running).
+app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, skip: (req) => !!req.session?.user, standardHeaders: true, legacyHeaders: false }));
 // Only counts public form submissions; signed-in portal traffic is exempt so
 // an admin working the inbox can't lock themselves out.
 const formLimiter = rateLimit({

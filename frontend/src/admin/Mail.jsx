@@ -143,7 +143,7 @@ function Composer({ initial, pool, onDone }) {
 function Detail({ id, onBack, onEdit }) {
   const [b, setB] = useState(null); const [err, setErr] = useState(''); const [rows, setRows] = useState(null); const [filter, setFilter] = useState('failed')
   const timer = useRef(null)
-  const load = async () => { try { const d = await api(`/admin/blasts/${id}`); setB(d); if (d.status === 'sending') timer.current = setTimeout(load, 2000) } catch (e) { setErr(e.message) } }
+  const load = async () => { try { const d = await api(`/admin/blasts/${id}`); setB(d); if (d.status === 'sending') timer.current = setTimeout(load, 5000) } catch (e) { setErr(e.message) } }
   useEffect(() => { load(); return () => clearTimeout(timer.current) }, [id]) // eslint-disable-line
   const loadRows = async (st) => { setFilter(st); setRows((await api(`/admin/blasts/${id}/recipients?status=${st}`)).rows) }
   const act = async (path, confirmMsg, body) => { if (confirmMsg && !confirm(confirmMsg)) return; setErr(''); try { await api(`/admin/blasts/${id}/${path}`, { method: 'POST', body }); load() } catch (e) { setErr(e.message) } }
