@@ -11,7 +11,7 @@ const KIND_LABEL = { primary: 'primary', alternate: 'alt', permutation: 'guess' 
 export default function Contacts() {
   const [err, setErr] = useState('')
   const [data, setData] = useState(null)
-  const [filters, setFilters] = useState({ q: '', tag: '', status: '', optin: false })
+  const [filters, setFilters] = useState({ q: '', tag: '', status: '', optin: false, reach: '' })
   const [open, setOpen] = useState(null)
   const [busy, setBusy] = useState(false)
   const [bulk, setBulk] = useState('')
@@ -24,11 +24,12 @@ export default function Contacts() {
       if (filters.q) qs.set('q', filters.q)
       if (filters.tag) qs.set('tag', filters.tag)
       if (filters.status) qs.set('status', filters.status)
+      if (filters.reach) qs.set('reach', filters.reach)
       if (filters.optin) qs.set('optin', '1')
       setData(await api('/admin/people?' + qs.toString()))
     } catch (e) { setErr(e.message) } finally { setBusy(false) }
   }
-  useEffect(() => { load() }, [filters.tag, filters.status, filters.optin]) // eslint-disable-line
+  useEffect(() => { load() }, [filters.tag, filters.status, filters.optin, filters.reach]) // eslint-disable-line
 
   const patchPerson = (p) => setData(d => ({ ...d, people: d.people.map(x => x.id === p.id ? p : x) }))
   const act = async (fn) => { setBusy(true); setErr(''); try { await fn() } catch (e) { setErr(e.message) } finally { setBusy(false) } }
@@ -62,6 +63,9 @@ export default function Contacts() {
         <select value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
           <option value="">Any email status</option>{STATUSES.map(s => <option key={s} value={s}>has {s}</option>)}
         </select>
+        <select value={filters.reach || ''} onChange={e => setFilters(f => ({ ...f, reach: e.target.value }))}>
+          <option value="">Reachable or not</option><option value="ok">Has a working address</option><option value="none">No working address</option>
+        </select>
         <label className="check" style={{ margin: 0 }}><input type="checkbox" checked={filters.optin} onChange={e => setFilters(f => ({ ...f, optin: e.target.checked }))} /> opt-in only</label>
         <button className="btn btn-outline" onClick={load} disabled={busy}>Search</button>
         <button className="btn btn-primary" onClick={() => setAdding(a => !a)}>+ Person</button>
@@ -78,6 +82,8 @@ export default function Contacts() {
           <button className="btn btn-outline" onClick={() => markBulk('sent')} disabled={busy || !bulk.trim()}>Mark sent</button>
           <a className="btn btn-outline" href={exportUrl('&status=unverified')}>Export unverified CSV</a>
           <a className="btn btn-outline" href={exportUrl('&status=unverified&kind=primary')}>Export primaries only</a>
+          <a className="btn btn-outline" href={exportUrl('&status=bounced')}>Export bounced CSV</a>
+          <a className="btn btn-outline" href={exportUrl('&status=confirmed')}>Export confirmed CSV</a>
         </div>
       </details>
 

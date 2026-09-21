@@ -106,7 +106,7 @@ function Composer({ initial, pool, onDone }) {
           <div><label>Subject *</label><input value={b.subject} onChange={set('subject')} placeholder="Reconnecting with the crew of Comanche" /></div>
           <div><label>Preheader <span className="small">(preview text in the inbox list, optional)</span></label><input value={b.preheader} onChange={set('preheader')} /></div>
           <div><label>Body *</label><textarea style={{ minHeight: 320, fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: '0.9rem' }} value={b.body} onChange={set('body')} /></div>
-          <div className="small">Blank line = new paragraph · <code>**bold**</code> · <code>[label](https://…)</code> · lines starting <code>- </code> make a list · merge fields <code>{'{{first_name|there}}'}</code> <code>{'{{name}}'}</code> <code>{'{{email}}'}</code>. The unsubscribe link and "why you're receiving this" footer are added automatically.</div>
+          <div className="small">Blank line = new paragraph · <code>**bold**</code> · <code>[label](https://…)</code> · lines starting <code>- </code> make a list · merge fields <code>{'{{first_name|there}}'}</code> <code>{'{{name}}'}</code> <code>{'{{email}}'}</code> <code>{'{{confirm_url}}'}</code>. A "Yes, keep me on the list" button, the unsubscribe link and the "why you're receiving this" footer are added automatically (put <code>{'{{confirm_url}}'}</code> in the body yourself to place the confirm link where you want instead).</div>
           <ImagePicker value={b.image} pool={pool} onChange={image => setB({ ...b, image })} />
           <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div><label>Pace <span className="small">(messages per minute)</span></label><input type="number" min={1} max={600} value={b.rate_per_minute ?? 30} onChange={e => setB({ ...b, rate_per_minute: Number(e.target.value) })} /></div>
@@ -183,8 +183,8 @@ function Detail({ id, onBack, onEdit }) {
 
       {b.status !== 'draft' && (
         <>
-          <div className="stats" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-            {[['total', b.total, ''], ['sent', b.sent, '#1f6b2a'], ['failed', b.failed, '#b8321f'], ['bounced', b.byStatus.bounced || 0, '#b8321f'], ['queued', b.byStatus.queued || 0, '']].map(([l, n, c]) => (
+          <div className="stats" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+            {[['total', b.total, ''], ['sent', b.sent, '#1f6b2a'], ['confirmed', b.byStatus.confirmed || 0, '#1f6b2a'], ['failed', b.failed, '#b8321f'], ['bounced', b.byStatus.bounced || 0, '#b8321f'], ['queued', b.byStatus.queued || 0, '']].map(([l, n, c]) => (
               <div className="stat" key={l} style={{ cursor: 'pointer' }} onClick={() => loadRows(l === 'total' ? '' : l)}><div className="stat-n" style={{ color: c || undefined }}>{n}</div><div className="stat-l">{l}</div></div>
             ))}
           </div>
@@ -194,7 +194,7 @@ function Detail({ id, onBack, onEdit }) {
             <>
               <h3 style={{ marginTop: 16 }}>{filter || 'all'} ({rows.length})</h3>
               <table className="spec" style={{ fontSize: '0.88rem' }}><tbody>
-                {rows.map(r => <tr key={r.id}><th style={{ width: '38%', fontWeight: 400 }}><code>{r.email}</code></th><td>{r.name}</td><td className="small" style={{ color: STATUS_COLOR[r.status === 'sent' ? 'done' : 'failed'] }}>{r.status}{r.error && ` — ${r.error}`}</td></tr>)}
+                {rows.map(r => <tr key={r.id}><th style={{ width: '38%', fontWeight: 400 }}><code>{r.email}</code></th><td>{r.name}</td><td className="small" style={{ color: STATUS_COLOR[['sent', 'confirmed'].includes(r.status) ? 'done' : 'failed'] }}>{r.status}{r.error && ` — ${r.error}`}</td></tr>)}
               </tbody></table>
             </>
           )}

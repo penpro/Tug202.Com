@@ -3,7 +3,7 @@ const https = require('https');
 const pool = require('../db');
 const { str, email } = require('../validate');
 const { deliver, suppressed, backendName } = require('../mailer');
-const { render, verifyUnsubToken, HERO_POOL } = require('../mail-template');
+const { render, verifyUnsubToken, verifyConfirmToken, HERO_POOL } = require('../mail-template');
 
 // ---------------------------------------------------------------------------
 // Mail blasts.
@@ -76,7 +76,7 @@ async function runBlast(id) {
         if (today >= blast.daily_cap) { await new Promise(res => setTimeout(res, 5 * 60 * 1000)); continue; } // cap hit: re-check every 5 min
       }
       try {
-        const m = render(blast, r);
+        const m = render(blast, { ...r, blastId: id });
         const mid = await deliver({ to: r.email, subject: m.subject, text: m.text, html: m.html, requireTracking: !!process.env.SES_CONFIG_SET,
           headers: { 'List-Unsubscribe': `<${m.unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } });
         await pool.execute("UPDATE blast_recipients SET status = 'sent', message_id = ?, sent_at = NOW() WHERE id = ?", [mid || null, r.id]);
@@ -306,6 +306,21 @@ pub.get('/unsubscribe', async (req, res, next) => {
     res.type('html').send(page('You are unsubscribed', `<p><strong>${e.replace(/</g, '&lt;')}</strong> will not receive further mailings from us.</p><p>Changed your mind? You can <a href="https://tug202.org/support">sign up again</a> any time.</p>`));
   } catch (err) { next(err); }
 });
+// "Keep me on the list": flips the address to confirmed in the CRM (and the
+// subscriber list), and stamps the blast recipient row so the blast page can
+// count confirmations. Idempotent; a GET so it's one click from the email.
+pub.get('/confirm', async (req, res, next) => {
+  try {
+    const t = verifyConfirmToken(req.query.t);
+    if (!t) return res.status(400).type('html').send(page('Link not valid', '<p>This confirmation link is malformed. Reply to any of our emails and we will note it by hand.</p>'));
+    const e = t.email;
+    await pool.execute("UPDATE contact_emails SET status = 'confirmed', status_at = NOW(), status_note = 'clicked keep-me' WHERE email = ? AND status NOT IN ('unsubscribed')", [e]);
+    await pool.execute('UPDATE newsletter_subscribers SET confirmed_at = COALESCE(confirmed_at, NOW()) WHERE email = ?', [e]).catch(() => {});
+    if (t.blastId) await pool.execute("UPDATE blast_recipients SET status = 'confirmed', confirmed_at = NOW() WHERE blast_id = ? AND email = ? AND status = 'sent'", [t.blastId, e]);
+    res.type('html').send(page('Thank you — you are on the list', `<p><strong>${e.replace(/</g, '&lt;')}</strong> is confirmed. We send a few updates a year: cruises, work parties, and the occasional ask for help keeping Comanche running.</p><p>See what the ship is up to at <a href="https://tug202.org/news">tug202.org/news</a>, or <a href="https://tug202.org/support">chip in for fuel</a>.</p>`));
+  } catch (err) { next(err); }
+});
+
 // RFC 8058 one-click (mail clients POST here).
 pub.post('/unsubscribe', express.urlencoded({ extended: false }), async (req, res, next) => {
   try { const e = verifyUnsubToken(req.query.t); if (e) await unsubscribe(e); res.status(200).end(); } catch (err) { next(err); }

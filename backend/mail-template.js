@@ -7,7 +7,7 @@
 //   **bold**            -> bold
 //   [label](https://…)  -> link; bare https:// URLs are linked too
 //   lines starting "- " -> bullet list
-//   {{first_name}} {{name}} {{email}} {{unsubscribe_url}} -> merge fields;
+//   {{first_name}} {{name}} {{email}} {{unsubscribe_url}} {{confirm_url}} -> merge fields;
 //   {{first_name|there}} gives a fallback when the name is blank.
 
 const crypto = require('crypto');
@@ -30,7 +30,23 @@ function resolveImage(blast) {
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// ---- unsubscribe tokens (HMAC of the address; no DB row needed) ------------
+// ---- signed links (HMAC of purpose + address; no DB row needed) ------------
+// purpose keeps an unsubscribe token from doubling as a confirm token.
+function signedToken(purpose, email, blastId) {
+  const e = email.trim().toLowerCase();
+  const body = blastId ? `${e}|${blastId}` : e;
+  const sig = crypto.createHmac('sha256', process.env.SESSION_SECRET || 'dev').update(`${purpose}:${body}`).digest('base64url').slice(0, 24);
+  return Buffer.from(body).toString('base64url') + '.' + sig;
+}
+// Returns { email, blastId } or null.
+function verifySignedToken(purpose, t) {
+  const [b, sig] = String(t || '').split('.');
+  if (!b || !sig) return null;
+  let body; try { body = Buffer.from(b, 'base64url').toString('utf8'); } catch { return null; }
+  const [email, blastId] = body.split('|');
+  return signedToken(purpose, email, blastId).split('.')[1] === sig ? { email, blastId: Number(blastId) || null } : null;
+}
+// Unsubscribe keeps its original (unprefixed) form so links already in inboxes stay valid.
 function unsubToken(email) {
   const e = email.trim().toLowerCase();
   const sig = crypto.createHmac('sha256', process.env.SESSION_SECRET || 'dev').update(e).digest('base64url').slice(0, 24);
@@ -43,12 +59,15 @@ function verifyUnsubToken(t) {
   return unsubToken(e).split('.')[1] === sig ? e : null;
 }
 const unsubUrl = (email) => `${SITE()}/api/unsubscribe?t=${unsubToken(email)}`;
+const confirmUrl = (email, blastId) => `${SITE()}/api/confirm?t=${signedToken('confirm', email, blastId)}`;
+const verifyConfirmToken = (t) => verifySignedToken('confirm', t);
 
 // ---- merge fields -----------------------------------------------------------
+// r: { email, name, blastId? }
 function merge(s, r) {
   const first = (r.name || '').trim().split(/\s+/)[0] || '';
   return String(s).replace(/\{\{\s*(\w+)(?:\|([^}]*))?\s*\}\}/g, (_, k, fb) => {
-    const v = { first_name: first, name: (r.name || '').trim(), email: r.email, unsubscribe_url: unsubUrl(r.email) }[k];
+    const v = { first_name: first, name: (r.name || '').trim(), email: r.email, unsubscribe_url: unsubUrl(r.email), confirm_url: confirmUrl(r.email, r.blastId) }[k];
     return v || fb || '';
   });
 }
@@ -84,8 +103,16 @@ function render(blast, r) {
   const pre = merge(blast.preheader || '', r);
   const body = merge(blast.body, r);
   const unsub = unsubUrl(r.email);
+  const confirm = confirmUrl(r.email, r.blastId || blast.id);
   const site = SITE();
   const image = resolveImage(blast);
+  // "Keep me on the list" button, unless the author placed {{confirm_url}} in the body themselves.
+  const confirmRow = /\{\{\s*confirm_url/.test(blast.body || '') ? '' : `<tr><td align="center" style="padding:4px 28px 26px">
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#0b1f3a;border-radius:4px">
+      <a href="${confirm}" style="display:inline-block;padding:12px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#fff;text-decoration:none">&#10003; Yes, keep me on the list</a>
+    </td></tr></table>
+    <div style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#7a8190">One click tells us this address still reaches you.</div>
+  </td></tr>`;
   const hero = image ? `<tr><td style="padding:0"><img src="${site}/images/${esc(image)}.jpg" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : '';
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(subject)}</title></head>
@@ -101,6 +128,7 @@ function render(blast, r) {
   </td></tr>
   ${hero}
   <tr><td style="padding:28px 28px 8px">${bodyHtml(body)}</td></tr>
+  ${confirmRow}
   <tr><td style="padding:8px 28px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#7a8190;border-top:1px solid #e6e0d3">
     <p style="margin:14px 0 8px">${esc(WHY)}</p>
     <p style="margin:0 0 8px"><a href="${unsub}" style="color:#7a8190">Unsubscribe</a> &nbsp;&middot;&nbsp; <a href="${site}" style="color:#7a8190">tug202.org</a> &nbsp;&middot;&nbsp; <a href="${site}/support" style="color:#7a8190">Support the ship</a></p>
@@ -108,9 +136,9 @@ function render(blast, r) {
   </td></tr>
 </table></td></tr></table></body></html>`;
 
-  const text = `${bodyText(body)}\n\n--\n${WHY}\nUnsubscribe: ${unsub}\n${ORG} · tug202.org · EIN 39-5018917 · Auburn, Washington\n`;
+  const text = `${bodyText(body)}\n\nStill want to hear from us? Confirm with one click: ${confirm}\n\n--\n${WHY}\nUnsubscribe: ${unsub}\n${ORG} · tug202.org · EIN 39-5018917 · Auburn, Washington\n`;
 
-  return { subject, html, text, unsub };
+  return { subject, html, text, unsub, confirm };
 }
 
-module.exports = { render, merge, unsubToken, verifyUnsubToken, unsubUrl, HERO_POOL, resolveImage };
+module.exports = { render, merge, unsubToken, verifyUnsubToken, unsubUrl, confirmUrl, verifyConfirmToken, HERO_POOL, resolveImage };

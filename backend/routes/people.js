@@ -54,6 +54,11 @@ router.get('/people', async (req, res, next) => {
       where.push('id IN (SELECT contact_id FROM contact_emails WHERE status = ?)'); args.push(req.query.status);
     }
     if (req.query.optin === '1') where.push('optin = 1');
+    // reach=none: every address bounced/unsubscribed (or no address at all) — the
+    // people we've effectively lost. reach=ok: at least one live address.
+    const LIVE = "SELECT contact_id FROM contact_emails WHERE status IN ('unverified','sent','confirmed')";
+    if (req.query.reach === 'none') where.push(`id NOT IN (${LIVE})`);
+    if (req.query.reach === 'ok') where.push(`id IN (${LIVE})`);
     const people = await loadPeople(where.join(' AND '), args);
     const [[tot]] = await pool.query('SELECT COUNT(*) AS people, (SELECT COUNT(*) FROM contact_emails) AS emails FROM contacts');
     const [byStatus] = await pool.query('SELECT status, COUNT(*) AS n FROM contact_emails GROUP BY status');
