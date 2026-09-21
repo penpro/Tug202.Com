@@ -45,7 +45,7 @@ function requireAuth(req, res, next) {
   const given = header.startsWith('Bearer ') ? header.slice(7) : String(req.query.token || '');
   if (expected && !/replace-me/.test(expected) && given) {
     const a = Buffer.from(given), b = Buffer.from(expected);
-    if (a.length === b.length && crypto.timingSafeEqual(a, b)) { req.user = { id: 0, email: 'token', name: 'API token', role: 'admin' }; return next(); }
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) { req.user = { id: 0, email: 'token', name: 'The Tug Comanche board', role: 'admin' }; return next(); }
   }
   res.status(401).json({ error: 'Sign in required' });
 }
