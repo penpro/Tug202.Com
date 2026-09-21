@@ -66,19 +66,36 @@ ssh -i 202.pem ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com 'cd ~/Tug202.Co
 
 Expect `backend: ses` then `sent to …`. If it says `not authorized`, the role isn't attached yet; `Email address is not verified` means step 1 or 2 hasn't finished.
 
-## 7. Bounce & complaint tracking (for mail blasts)
+## 7. Bounce & complaint tracking (for mail blasts) — automatic
 
-The portal's **Mail** tab marks an address `sent` when SES accepts it, but a bad address bounces *later*. SES reports that to us through an SNS topic and a webhook on the server, which flips the address to `bounced` (or `unsubscribed` on a spam complaint) so it's never mailed again. One-time setup:
+The portal's **Mail** tab marks an address `sent` when SES accepts it, but a bad address bounces *later*. SES reports that to us through an SNS topic and a webhook on the server, which flips the address to `bounced` (or `unsubscribed` on a spam complaint) so it's never mailed again. No manual work after this one-time wiring.
+
+**Fastest way — one script in CloudShell** (console → the `>_` terminal icon top-right, region us-east-1). It creates the topic, the HTTPS subscription (the server confirms it itself), the `tug202` configuration set, the bounce/complaint event destination, and — if the account is still in the sandbox — files the production-access request from step 5 with the full use-case text:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/penpro/Tug202.Com/main/ops/ses-bounce-setup.sh | bash
+```
+
+It's idempotent; re-run it any time to see the account status (production flag, daily quota, review status). Then on the EC2 box:
+
+```bash
+ssh -i 202.pem ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com 'grep -q SES_CONFIG_SET ~/Tug202.Com/backend/.env || echo "SES_CONFIG_SET=tug202" >> ~/Tug202.Com/backend/.env; pm2 restart tug202-backend --update-env'
+```
+
+(Setting `SES_CONFIG_SET` before the set exists is safe — the mailer logs one warning and sends without it.)
+
+<details><summary>Same thing by hand in the console</summary>
 
 1. **SNS → Topics → Create topic** → Standard → name `tug202-ses-events` → Create.
 2. On that topic → **Create subscription** → Protocol **HTTPS** → Endpoint `https://tug202.org/api/ses/events` → Create subscription. The server confirms it automatically within a few seconds (Status shows *Confirmed*; if it stays *Pending*, check `pm2 logs tug202-backend`).
-3. **SES → Configuration sets → Create set** → name `tug202` → Create. Open it → **Event destinations → Add destination** → tick **Hard bounces** and **Complaints** (Deliveries optional) → Next → destination **Amazon SNS**, topic `tug202-ses-events` → name `sns` → Add destination.
-4. Tell the app to send through that set — on the server:
-   ```bash
-   ssh -i 202.pem ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com 'echo "SES_CONFIG_SET=tug202" >> ~/Tug202.Com/backend/.env && pm2 restart tug202-backend --update-env'
-   ```
+3. **SES → Configuration sets → Create set** → name `tug202` → Create. Open it → **Event destinations → Add destination** → tick **Hard bounces** and **Complaints** → Next → destination **Amazon SNS**, topic `tug202-ses-events` → name `sns` → Add destination.
+4. `SES_CONFIG_SET=tug202` in `backend/.env` as above.
+
+</details>
 
 SES also emails bounce notices to the From address by default; that's harmless noise (nothing receives at no-reply@) and can be turned off under Identities → tug202.org → Notifications → *Email feedback forwarding*.
+
+**Where it shows up:** Contacts tab → the address's status becomes `bounced` with a timestamp, and the blast's detail page counts it under *bounced*. `buildAudience` excludes bounced/unsubscribed addresses from every future blast automatically.
 
 ## 8. Inbound mail — `info@tug202.org`
 
@@ -88,6 +105,20 @@ SES only handles *sending* above. Receiving mail at the domain is a separate cho
 - **SES receiving + forwarding** — all-AWS: an SES receipt rule stores incoming mail in S3 and a small Lambda forwards it to a Gmail address. Works, free at this volume, but ~30 min of console setup and every new alias is a code change. Reasonable stopgap if Workspace approval is slow.
 
 Until one of those exists, `info@tug202.org` on the website bounces. The contact form doesn't depend on it.
+
+## 9. Sending blasts without hitting limits
+
+Every blast has a **pace** (messages per minute, default 30 = one every 2 s) and an optional **daily cap** counted across all blasts (SES sandbox: 200/day and 1/s; production: 50,000/day, 14/s). If SES throttles, the server leaves the address queued and backs off a minute; if the cap is hit it sleeps and resumes after midnight. Blasts survive a restart — state lives in MySQL.
+
+Three ways to start one:
+
+- **Portal → Mail → Send now**, or pick a date/time and **Schedule** (a minute ticker on the server starts it).
+- **Server shell**, useful over a slow connection:
+  ```bash
+  ssh -i 202.pem ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com 'cd ~/Tug202.Com/backend && node scripts/blast.js list'
+  ```
+  `send <id>`, `send <id> --at "2026-09-22 09:00" --rate 20 --cap 180`, `pause|resume|unschedule <id>`, `status <id>`, `test <id> you@example.com`.
+- **API** with the bearer token: `POST /api/admin/blasts/:id/send` with `{"scheduled_at": "<ISO>"}` or an empty body.
 
 ## Config reference (`backend/.env`)
 

@@ -3,7 +3,7 @@ const https = require('https');
 const pool = require('../db');
 const { str, email } = require('../validate');
 const { deliver, backendName } = require('../mailer');
-const { render, verifyUnsubToken } = require('../mail-template');
+const { render, verifyUnsubToken, HERO_POOL } = require('../mail-template');
 
 // ---------------------------------------------------------------------------
 // Mail blasts.
@@ -27,7 +27,8 @@ const { render, verifyUnsubToken } = require('../mail-template');
 const admin = express.Router();
 const pub = express.Router();
 
-const SEND_INTERVAL_MS = 250;   // ~4/s; SES sandbox allows 1/s, production 14/s
+// Pacing is per blast: rate_per_minute (default 30 = one every 2 s; SES sandbox
+// allows 1/s) and an optional daily_cap (SES sandbox: 200/day). Both editable.
 const SUPPRESSED = "SELECT DISTINCT email FROM contact_emails WHERE status IN ('bounced','unsubscribed') UNION SELECT DISTINCT email FROM blast_recipients WHERE status IN ('bounced','complained') UNION SELECT email FROM newsletter_subscribers WHERE unsubscribed_at IS NOT NULL";
 
 // ---- audience ---------------------------------------------------------------
@@ -69,6 +70,11 @@ async function runBlast(id) {
       const [[r]] = await pool.query("SELECT * FROM blast_recipients WHERE blast_id = ? AND status = 'queued' ORDER BY id LIMIT 1", [id]);
       if (!r) { await pool.execute("UPDATE blasts SET status = 'done', finished_at = NOW() WHERE id = ?", [id]); break; }
       const [[blast]] = await pool.query('SELECT * FROM blasts WHERE id = ?', [id]);
+      if (blast.daily_cap > 0) {
+        // The cap is the SES account quota, so count every blast's sends today.
+        const [[{ today }]] = await pool.query('SELECT COUNT(*) AS today FROM blast_recipients WHERE sent_at >= CURDATE()');
+        if (today >= blast.daily_cap) { await new Promise(res => setTimeout(res, 5 * 60 * 1000)); continue; } // cap hit: re-check every 5 min
+      }
       try {
         const m = render(blast, r);
         const mid = await deliver({ to: r.email, subject: m.subject, text: m.text, html: m.html,
@@ -78,31 +84,56 @@ async function runBlast(id) {
         if (r.contact_email_id) await pool.execute("UPDATE contact_emails SET status = 'sent', status_at = NOW() WHERE id = ? AND status = 'unverified'", [r.contact_email_id]);
       } catch (err) {
         const msg = str(err.message, 300);
+        // Throttling / quota from SES: leave the row queued and back off rather than burn the queue.
+        if (/throttl|rate exceeded|Too many|quota|sending limit/i.test(msg)) { console.warn('[blast]', id, 'backing off:', msg); await new Promise(res => setTimeout(res, 60 * 1000)); continue; }
         await pool.execute("UPDATE blast_recipients SET status = 'failed', error = ? WHERE id = ?", [msg, r.id]);
         await pool.execute('UPDATE blasts SET failed = failed + 1 WHERE id = ?', [id]);
-        // Throttling from SES: back off rather than burn the queue.
-        if (/throttl|rate exceeded|Too many/i.test(msg)) await new Promise(res => setTimeout(res, 5000));
       }
-      await new Promise(res => setTimeout(res, SEND_INTERVAL_MS));
+      await new Promise(res => setTimeout(res, Math.max(200, Math.round(60000 / Math.max(1, blast.rate_per_minute || 30)))));
     }
   } finally { running.delete(id); }
 }
 
-// Resume anything left 'sending' after a restart.
-setTimeout(async () => {
-  try { const [rows] = await pool.query("SELECT id FROM blasts WHERE status = 'sending'"); rows.forEach(r => runBlast(r.id)); } catch {}
-}, 3000);
+// Start a blast: build the recipient list once, then run.
+async function startBlast(id) {
+  const [[b]] = await pool.query('SELECT * FROM blasts WHERE id = ?', [id]);
+  if (!b || !['draft', 'scheduled'].includes(b.status)) return { error: 'Already sent or sending' };
+  if (backendName === 'none') return { error: 'No mail backend configured' };
+  const list = await buildAudience(typeof b.audience === 'string' ? JSON.parse(b.audience) : b.audience);
+  if (!list.length) return { error: 'Audience is empty' };
+  for (const r of list) await pool.execute('INSERT IGNORE INTO blast_recipients (blast_id, email, name, contact_email_id) VALUES (?, ?, ?, ?)', [id, r.email, r.name || '', r.contact_email_id]);
+  await pool.execute("UPDATE blasts SET status = 'sending', total = ?, started_at = NOW() WHERE id = ?", [list.length, id]);
+  runBlast(id);
+  return { ok: true, total: list.length };
+}
+
+// Resume anything left 'sending' after a restart, and start scheduled blasts
+// whose time has come (checked every minute).
+async function tick() {
+  try {
+    const [run] = await pool.query("SELECT id FROM blasts WHERE status = 'sending'"); run.forEach(r => runBlast(r.id));
+    const [due] = await pool.query("SELECT id FROM blasts WHERE status = 'scheduled' AND scheduled_at <= NOW()");
+    for (const r of due) await startBlast(r.id);
+  } catch (err) { console.error('[blasts:tick]', err.message); }
+}
+setTimeout(tick, 3000);
+setInterval(tick, 60 * 1000);
 
 // ---- admin routes -------------------------------------------------------------
-const fields = (b) => ({ subject: str(b.subject, 200), preheader: str(b.preheader, 200), body: str(b.body, 50000), image: str(b.image, 120) || null });
+const fields = (b) => ({
+  subject: str(b.subject, 200), preheader: str(b.preheader, 200), body: str(b.body, 50000), image: str(b.image, 120) || null,
+  rate_per_minute: Math.min(600, Math.max(1, Number(b.rate_per_minute) || 30)),
+  daily_cap: Math.min(50000, Math.max(0, Number(b.daily_cap) || 0))
+});
+const parseWhen = (v) => { const d = v ? new Date(v) : null; return d && !isNaN(d) && d.getTime() > Date.now() ? d : null; };
 
 admin.get('/blasts', async (req, res, next) => {
-  try { const [rows] = await pool.query('SELECT id, subject, status, total, sent, failed, created_at, started_at, finished_at FROM blasts ORDER BY id DESC'); res.json({ blasts: rows }); }
+  try { const [rows] = await pool.query('SELECT id, subject, status, total, sent, failed, rate_per_minute, daily_cap, scheduled_at, created_at, started_at, finished_at FROM blasts ORDER BY id DESC'); res.json({ blasts: rows, heroPool: HERO_POOL }); }
   catch (err) { next(err); }
 });
 
 admin.post('/blasts/preview', (req, res) => {
-  const b = fields(req.body || {});
+  const b = { ...fields(req.body || {}), id: Number(req.body?.id) || 0 }; // id keeps 'auto' image stable between preview and send
   const m = render(b, { email: req.user.email || 'you@example.com', name: req.user.name || 'Sample Name' });
   res.json({ subject: m.subject, html: m.html, text: m.text });
 });
@@ -116,8 +147,8 @@ admin.post('/blasts', async (req, res, next) => {
   try {
     const b = fields(req.body || {});
     if (!b.subject || !b.body) return res.status(400).json({ error: 'Subject and body required' });
-    const [r] = await pool.execute('INSERT INTO blasts (subject, preheader, body, image, audience, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [b.subject, b.preheader, b.body, b.image, JSON.stringify(req.body?.audience || { source: 'crm' }), req.user.id || null]);
+    const [r] = await pool.execute('INSERT INTO blasts (subject, preheader, body, image, audience, rate_per_minute, daily_cap, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [b.subject, b.preheader, b.body, b.image, JSON.stringify(req.body?.audience || { source: 'crm' }), b.rate_per_minute, b.daily_cap, req.user.id || null]);
     res.status(201).json({ id: r.insertId });
   } catch (err) { next(err); }
 });
@@ -136,17 +167,17 @@ admin.patch('/blasts/:id', async (req, res, next) => {
     const id = Number(req.params.id);
     const [[b]] = await pool.query('SELECT status FROM blasts WHERE id = ?', [id]);
     if (!b) return res.status(404).json({ error: 'Not found' });
-    if (b.status !== 'draft') return res.status(400).json({ error: 'Only drafts can be edited' });
+    if (!['draft', 'scheduled'].includes(b.status)) return res.status(400).json({ error: 'Only drafts can be edited' });
     const f = fields(req.body || {});
-    await pool.execute('UPDATE blasts SET subject = ?, preheader = ?, body = ?, image = ?, audience = ? WHERE id = ?',
-      [f.subject, f.preheader, f.body, f.image, JSON.stringify(req.body?.audience || { source: 'crm' }), id]);
+    await pool.execute('UPDATE blasts SET subject = ?, preheader = ?, body = ?, image = ?, audience = ?, rate_per_minute = ?, daily_cap = ? WHERE id = ?',
+      [f.subject, f.preheader, f.body, f.image, JSON.stringify(req.body?.audience || { source: 'crm' }), f.rate_per_minute, f.daily_cap, id]);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
 admin.delete('/blasts/:id', async (req, res, next) => {
   try {
-    const [r] = await pool.execute("DELETE FROM blasts WHERE id = ? AND status IN ('draft','done','failed')", [Number(req.params.id)]);
+    const [r] = await pool.execute("DELETE FROM blasts WHERE id = ? AND status IN ('draft','scheduled','done','failed')", [Number(req.params.id)]);
     res.json({ deleted: r.affectedRows });
   } catch (err) { next(err); }
 });
@@ -163,20 +194,23 @@ admin.post('/blasts/:id/test', async (req, res, next) => {
   } catch (err) { res.status(502).json({ error: err.message }); }
 });
 
+// Send now, or schedule with { scheduled_at: ISO }. /unschedule puts a
+// scheduled blast back to draft.
 admin.post('/blasts/:id/send', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const [[b]] = await pool.query('SELECT * FROM blasts WHERE id = ?', [id]);
-    if (!b) return res.status(404).json({ error: 'Not found' });
-    if (b.status !== 'draft') return res.status(400).json({ error: 'Already sent or sending' });
-    if (backendName === 'none') return res.status(400).json({ error: 'No mail backend configured' });
-    const list = await buildAudience(typeof b.audience === 'string' ? JSON.parse(b.audience) : b.audience);
-    if (!list.length) return res.status(400).json({ error: 'Audience is empty' });
-    for (const r of list) await pool.execute('INSERT IGNORE INTO blast_recipients (blast_id, email, name, contact_email_id) VALUES (?, ?, ?, ?)', [id, r.email, r.name || '', r.contact_email_id]);
-    await pool.execute("UPDATE blasts SET status = 'sending', total = ?, started_at = NOW() WHERE id = ?", [list.length, id]);
-    runBlast(id);
-    res.json({ ok: true, total: list.length });
+    const when = parseWhen(req.body?.scheduled_at);
+    if (when) {
+      const [r] = await pool.execute("UPDATE blasts SET status = 'scheduled', scheduled_at = ? WHERE id = ? AND status = 'draft'", [when, id]);
+      return r.affectedRows ? res.json({ ok: true, scheduled_at: when }) : res.status(400).json({ error: 'Only a draft can be scheduled' });
+    }
+    const out = await startBlast(id);
+    res.status(out.error ? 400 : 200).json(out);
   } catch (err) { next(err); }
+});
+admin.post('/blasts/:id/unschedule', async (req, res, next) => {
+  try { await pool.execute("UPDATE blasts SET status = 'draft', scheduled_at = NULL WHERE id = ? AND status = 'scheduled'", [Number(req.params.id)]); res.json({ ok: true }); }
+  catch (err) { next(err); }
 });
 
 admin.post('/blasts/:id/pause', async (req, res, next) => {
@@ -258,4 +292,4 @@ pub.post('/ses/events', express.text({ type: '*/*', limit: '256kb' }), async (re
   } catch (err) { console.error('[ses:events]', err.message); res.status(400).end(); }
 });
 
-module.exports = { admin, pub };
+module.exports = { admin, pub, startBlast, buildAudience };

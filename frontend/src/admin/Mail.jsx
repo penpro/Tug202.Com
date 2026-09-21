@@ -5,9 +5,10 @@ import { api, fmtDate } from './api.js'
 // Recipients and outcomes are tracked per address; bounces flow back from
 // SES automatically once the SNS webhook is wired (ops/email-setup.md).
 
-const STATUS_COLOR = { draft: '#7a8190', sending: '#1d4278', paused: '#a2823a', done: '#1f6b2a', failed: '#b8321f' }
+const STATUS_COLOR = { draft: '#7a8190', scheduled: '#5b6b8a', sending: '#1d4278', paused: '#a2823a', done: '#1f6b2a', failed: '#b8321f' }
+const fmtWhen = (d) => new Date(d).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
 const blankBlast = () => ({
-  subject: '', preheader: '', image: '',
+  subject: '', preheader: '', image: 'auto', rate_per_minute: 30, daily_cap: 0,
   body: 'Hi {{first_name|there}},\n\nA few years ago you signed up for updates about the historic tug Comanche — maybe at Olympia Harbor Days, in Bremerton, or aboard the ship. A lot has happened since, and we wanted to reconnect.\n\nThe ship is now cared for by a new nonprofit, the Tug Comanche Historical Rescue Foundation, and she is still underway under her own power. We have a new website with the full story: https://tug202.org\n\nIf you would rather not hear from us, there is an unsubscribe link at the bottom and we will take you off the list right away.\n\nThank you for being part of Comanche\'s story.\n\n— The Comanche crew',
   audience: { source: 'crm', statuses: ['unverified'], kinds: ['primary'], confidence: [], tag: '' }
 })
@@ -15,10 +16,11 @@ const blankBlast = () => ({
 export default function Mail() {
   const [list, setList] = useState(null); const [err, setErr] = useState('')
   const [view, setView] = useState({ mode: 'list' }) // list | edit | detail
-  const load = () => api('/admin/blasts').then(d => setList(d.blasts)).catch(e => setErr(e.message))
+  const [pool, setPool] = useState([])
+  const load = () => api('/admin/blasts').then(d => { setList(d.blasts); setPool(d.heroPool || []) }).catch(e => setErr(e.message))
   useEffect(() => { load() }, [])
 
-  if (view.mode === 'edit') return <Composer initial={view.blast} onDone={(id) => { load(); setView(id ? { mode: 'detail', id } : { mode: 'list' }) }} />
+  if (view.mode === 'edit') return <Composer initial={view.blast} pool={pool} onDone={(id) => { load(); setView(id ? { mode: 'detail', id } : { mode: 'list' }) }} />
   if (view.mode === 'detail') return <Detail id={view.id} onBack={() => { load(); setView({ mode: 'list' }) }} onEdit={(b) => setView({ mode: 'edit', blast: b })} />
 
   return (
@@ -35,7 +37,7 @@ export default function Mail() {
           <div className="admin-person" key={b.id}>
             <div className="admin-row" style={{ gridTemplateColumns: '1.6fr 1fr auto' }} onClick={() => setView({ mode: 'detail', id: b.id })}>
               <div className="admin-name"><strong>{b.subject}</strong><span className="pill" style={{ background: STATUS_COLOR[b.status] }}>{b.status}</span><div className="small">{fmtDate(b.created_at)}</div></div>
-              <div className="small">{b.status === 'draft' ? 'not sent' : `${b.sent} sent · ${b.failed} failed · ${b.total} total`}</div>
+              <div className="small">{b.status === 'draft' ? 'not sent' : b.status === 'scheduled' ? `sends ${fmtWhen(b.scheduled_at)}` : `${b.sent} sent · ${b.failed} failed · ${b.total} total`}</div>
               <div className="small">&rarr;</div>
             </div>
           </div>
@@ -78,7 +80,7 @@ function AudiencePicker({ a, onChange }) {
   )
 }
 
-function Composer({ initial, onDone }) {
+function Composer({ initial, pool, onDone }) {
   const [b, setB] = useState(initial)
   const [preview, setPreview] = useState(null); const [tab, setTab] = useState('html')
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
@@ -105,7 +107,12 @@ function Composer({ initial, onDone }) {
           <div><label>Preheader <span className="small">(preview text in the inbox list, optional)</span></label><input value={b.preheader} onChange={set('preheader')} /></div>
           <div><label>Body *</label><textarea style={{ minHeight: 320, fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: '0.9rem' }} value={b.body} onChange={set('body')} /></div>
           <div className="small">Blank line = new paragraph · <code>**bold**</code> · <code>[label](https://…)</code> · lines starting <code>- </code> make a list · merge fields <code>{'{{first_name|there}}'}</code> <code>{'{{name}}'}</code> <code>{'{{email}}'}</code>. The unsubscribe link and "why you're receiving this" footer are added automatically.</div>
-          <div><label>Hero image <span className="small">(basename in /images, e.g. narrows-fog — optional)</span></label><input value={b.image || ''} onChange={set('image')} /></div>
+          <ImagePicker value={b.image} pool={pool} onChange={image => setB({ ...b, image })} />
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div><label>Pace <span className="small">(messages per minute)</span></label><input type="number" min={1} max={600} value={b.rate_per_minute ?? 30} onChange={e => setB({ ...b, rate_per_minute: Number(e.target.value) })} /></div>
+            <div><label>Daily cap <span className="small">(0 = none)</span></label><input type="number" min={0} value={b.daily_cap ?? 0} onChange={e => setB({ ...b, daily_cap: Number(e.target.value) })} /></div>
+          </div>
+          <div className="small">Trickle defaults keep us under SES limits: 30/min is one every 2 s. While SES is still in the sandbox the account limit is 200/day and 1/s; after production access it&rsquo;s 50,000/day. When the cap is hit the blast waits and picks up after midnight on its own.</div>
           <AudiencePicker a={b.audience} onChange={audience => setB({ ...b, audience })} />
           {err && <div className={`form-msg ${/Test sent/.test(err) ? 'ok' : 'err'}`}>{err}</div>}
           <div className="btn-row">
@@ -139,7 +146,9 @@ function Detail({ id, onBack, onEdit }) {
   const load = async () => { try { const d = await api(`/admin/blasts/${id}`); setB(d); if (d.status === 'sending') timer.current = setTimeout(load, 2000) } catch (e) { setErr(e.message) } }
   useEffect(() => { load(); return () => clearTimeout(timer.current) }, [id]) // eslint-disable-line
   const loadRows = async (st) => { setFilter(st); setRows((await api(`/admin/blasts/${id}/recipients?status=${st}`)).rows) }
-  const act = async (path, confirmMsg) => { if (confirmMsg && !confirm(confirmMsg)) return; setErr(''); try { await api(`/admin/blasts/${id}/${path}`, { method: 'POST' }); load() } catch (e) { setErr(e.message) } }
+  const act = async (path, confirmMsg, body) => { if (confirmMsg && !confirm(confirmMsg)) return; setErr(''); try { await api(`/admin/blasts/${id}/${path}`, { method: 'POST', body }); load() } catch (e) { setErr(e.message) } }
+  const [when, setWhen] = useState('')
+  const schedule = () => { if (!when) return setErr('Pick a date and time first'); act('send', `Schedule this blast for ${fmtWhen(when)}?`, { scheduled_at: new Date(when).toISOString() }) }
   const remove = async () => { if (confirm('Delete this blast and its send log?')) { await api(`/admin/blasts/${id}`, { method: 'DELETE' }); onBack() } }
 
   if (!b) return <p className="small">{err || 'Loading…'}</p>
@@ -151,15 +160,24 @@ function Detail({ id, onBack, onEdit }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
         <h2 style={{ fontSize: '1.6rem', marginBottom: 0 }}>{b.subject} <span className="pill" style={{ background: STATUS_COLOR[b.status] }}>{b.status}</span></h2>
         <div className="btn-row" style={{ marginTop: 0 }}>
-          {b.status === 'draft' && <><button className="btn btn-outline" onClick={() => onEdit({ id: b.id, subject: b.subject, preheader: b.preheader, body: b.body, image: b.image || '', audience: b.audience })}>Edit</button>
-            <button className="btn btn-primary" onClick={() => act('send', 'Send this blast to the selected audience now? This cannot be undone.')}>Send now</button></>}
+          {['draft', 'scheduled'].includes(b.status) && <button className="btn btn-outline" onClick={() => onEdit({ id: b.id, subject: b.subject, preheader: b.preheader, body: b.body, image: b.image || '', rate_per_minute: b.rate_per_minute, daily_cap: b.daily_cap, audience: b.audience })}>Edit</button>}
+          {b.status === 'draft' && <button className="btn btn-primary" onClick={() => act('send', 'Send this blast to the selected audience now? This cannot be undone.')}>Send now</button>}
+          {b.status === 'scheduled' && <button className="btn btn-outline" onClick={() => act('unschedule')}>Cancel schedule</button>}
           {b.status === 'sending' && <button className="btn btn-outline" onClick={() => act('pause')}>Pause</button>}
           {b.status === 'paused' && <button className="btn btn-primary" onClick={() => act('resume')}>Resume</button>}
           {b.status !== 'sending' && <button className="btn btn-outline" style={{ borderColor: 'var(--stripe)', color: 'var(--stripe)' }} onClick={remove}>Delete</button>}
         </div>
       </div>
       {err && <div className="form-msg err">{err}</div>}
-      <p className="small">Created {fmtDate(b.created_at)}{b.started_at && ` · started ${fmtDate(b.started_at)}`}{b.finished_at && ` · finished ${fmtDate(b.finished_at)}`} · backend: {b.backend}</p>
+      <p className="small">Created {fmtDate(b.created_at)}{b.scheduled_at && b.status === 'scheduled' && ` · sends ${fmtWhen(b.scheduled_at)}`}{b.started_at && ` · started ${fmtDate(b.started_at)}`}{b.finished_at && ` · finished ${fmtDate(b.finished_at)}`} · {b.rate_per_minute}/min{b.daily_cap ? `, ${b.daily_cap}/day` : ''} · image: {b.image === 'auto' ? 'chosen for you' : b.image || 'none'} · backend: {b.backend}</p>
+      {b.status === 'draft' && (
+        <div className="notice" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <strong>Or schedule it:</strong>
+          <input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} style={{ maxWidth: 240 }} />
+          <button className="btn btn-outline" style={{ padding: '6px 12px' }} onClick={schedule}>Schedule</button>
+          <span className="small">Starts on its own at that time (your local clock) and trickles at the pace set on the draft. From the server shell: <code>node scripts/blast.js send {b.id} --at "YYYY-MM-DD HH:MM"</code>.</span>
+        </div>
+      )}
 
       {b.status !== 'draft' && (
         <>
@@ -180,8 +198,34 @@ function Detail({ id, onBack, onEdit }) {
           )}
         </>
       )}
-      {b.status === 'draft' && <AudienceSummary a={b.audience} />}
+      {['draft', 'scheduled'].includes(b.status) && <AudienceSummary a={b.audience} />}
       <details style={{ marginTop: 20 }}><summary className="small" style={{ cursor: 'pointer' }}>Show body</summary><pre style={{ whiteSpace: 'pre-wrap', background: '#fff', border: '1px solid var(--line)', padding: 14, borderRadius: 6, fontSize: '0.9rem' }}>{b.body}</pre></details>
+    </div>
+  )
+}
+
+// Hero image: "choose for me" (server picks from the curated pool per blast),
+// a thumbnail from the pool, none, or a custom basename.
+function ImagePicker({ value, pool, onChange }) {
+  const auto = value === 'auto'
+  const custom = value && !auto && !pool.includes(value)
+  return (
+    <div>
+      <label>Hero image</label>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', margin: 0, fontWeight: 600 }}><input type="checkbox" checked={auto} onChange={e => onChange(e.target.checked ? 'auto' : '')} /> Choose for me</label>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', margin: 0 }}><input type="radio" checked={!value} onChange={() => onChange('')} /> No image</label>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', margin: 0 }}>Custom: <input placeholder="basename in /images" value={custom ? value : ''} onChange={e => onChange(e.target.value)} style={{ maxWidth: 200, padding: '4px 8px' }} /></label>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6, opacity: auto ? 0.45 : 1 }}>
+        {pool.map(n => (
+          <button type="button" key={n} title={n} onClick={() => onChange(n)} disabled={auto}
+            style={{ padding: 0, border: value === n ? '3px solid var(--stripe)' : '1px solid var(--line)', borderRadius: 6, overflow: 'hidden', background: '#fff', cursor: auto ? 'default' : 'pointer', aspectRatio: '3 / 2' }}>
+            <img src={`/images/${n}.webp`} alt={n} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </button>
+        ))}
+      </div>
+      <div className="small" style={{ marginTop: 6 }}>{auto ? 'A different photo from the pool is picked for each blast; Preview shows the one this blast will use.' : value ? `Using ${value}` : 'Text-only email.'}</div>
     </div>
   )
 }

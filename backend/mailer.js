@@ -9,24 +9,32 @@ const nodemailer = require('nodemailer');
 const from = () => process.env.SMTP_FROM || '"Tug Comanche Foundation" <no-reply@tug202.org>';
 
 let backend = null;
+let warnedSet = false;
 if (process.env.SES_REGION) {
   const { SESv2Client, SendEmailCommand } = require('@aws-sdk/client-sesv2');
   const ses = new SESv2Client({ region: process.env.SES_REGION });
   backend = {
     name: 'ses',
     async deliver({ to, subject, text, html, replyTo, headers }) {
-      const r = await ses.send(new SendEmailCommand({
+      const params = (withSet) => ({
         FromEmailAddress: from(),
         Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
         ReplyToAddresses: replyTo ? [replyTo] : undefined,
-        ConfigurationSetName: process.env.SES_CONFIG_SET || undefined,
+        ConfigurationSetName: withSet && process.env.SES_CONFIG_SET ? process.env.SES_CONFIG_SET : undefined,
         Content: { Simple: {
           Subject: { Data: subject, Charset: 'UTF-8' },
           Body: { Text: { Data: text, Charset: 'UTF-8' }, ...(html ? { Html: { Data: html, Charset: 'UTF-8' } } : {}) },
           Headers: headers ? Object.entries(headers).map(([Name, Value]) => ({ Name, Value })) : undefined
         } }
-      }));
-      return r.MessageId;
+      });
+      try {
+        return (await ses.send(new SendEmailCommand(params(true)))).MessageId;
+      } catch (err) {
+        // SES_CONFIG_SET is pre-set before the set exists; degrade rather than fail.
+        if (!/configuration set/i.test(err.message)) throw err;
+        if (!warnedSet) { console.warn('[mail] SES configuration set not found; sending without it (bounce tracking off)'); warnedSet = true; }
+        return (await ses.send(new SendEmailCommand(params(false)))).MessageId;
+      }
     }
   };
 } else if (process.env.SMTP_HOST) {

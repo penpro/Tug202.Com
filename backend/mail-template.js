@@ -16,6 +16,18 @@ const SITE = () => (process.env.APP_BASE_URL || 'https://tug202.org').replace(/\
 const ORG = 'Tug Comanche Historical Rescue Foundation';
 const WHY = 'You are receiving this because you signed up for updates about the historic tug Comanche (ATA-202 / WMEC-202) at an event, on a boarding sheet, or on our website.';
 
+// Curated hero images (basenames under /images, jpg). 'auto' picks one
+// deterministically per blast so preview and send match.
+const HERO_POOL = ['hero-port-dazzle', 'starboard-cg-stripe', 'bow-flag', 'overhead-raft', 'deck-crew', 'port-townsend-raftup',
+  'crew-foredeck', 'underway-quarter', 'narrows-fog', 'at-the-pier', 'oly-rainbow', 'dockside-visitors', 'historic-coast-guard', 'comanche-moored'];
+function resolveImage(blast) {
+  const img = blast.image;
+  if (!img) return null;
+  if (img !== 'auto') return img;
+  const seed = blast.id || [...String(blast.subject || '')].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return HERO_POOL[seed % HERO_POOL.length];
+}
+
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // ---- unsubscribe tokens (HMAC of the address; no DB row needed) ------------
@@ -73,7 +85,8 @@ function render(blast, r) {
   const body = merge(blast.body, r);
   const unsub = unsubUrl(r.email);
   const site = SITE();
-  const hero = blast.image ? `<tr><td style="padding:0"><img src="${site}/images/${esc(blast.image)}.jpg" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : '';
+  const image = resolveImage(blast);
+  const hero = image ? `<tr><td style="padding:0"><img src="${site}/images/${esc(image)}.jpg" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></td></tr>` : '';
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(subject)}</title></head>
 <body style="margin:0;padding:0;background:#ece5d6">
@@ -100,4 +113,4 @@ function render(blast, r) {
   return { subject, html, text, unsub };
 }
 
-module.exports = { render, merge, unsubToken, verifyUnsubToken, unsubUrl };
+module.exports = { render, merge, unsubToken, verifyUnsubToken, unsubUrl, HERO_POOL, resolveImage };
