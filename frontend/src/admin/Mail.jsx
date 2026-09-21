@@ -165,10 +165,12 @@ function Detail({ id, onBack, onEdit }) {
           {b.status === 'scheduled' && <button className="btn btn-outline" onClick={() => act('unschedule')}>Cancel schedule</button>}
           {b.status === 'sending' && <button className="btn btn-outline" onClick={() => act('pause')}>Pause</button>}
           {b.status === 'paused' && <button className="btn btn-primary" onClick={() => act('resume')}>Resume</button>}
+          {b.failed > 0 && b.status !== 'sending' && <button className="btn btn-outline" onClick={() => act('requeue', `Put the ${b.failed} failed addresses back in the queue?`)}>Retry failed</button>}
           {b.status !== 'sending' && <button className="btn btn-outline" style={{ borderColor: 'var(--stripe)', color: 'var(--stripe)' }} onClick={remove}>Delete</button>}
         </div>
       </div>
       {err && <div className="form-msg err">{err}</div>}
+      {b.note && <div className="form-msg err">{b.note}</div>}
       <p className="small">Created {fmtDate(b.created_at)}{b.scheduled_at && b.status === 'scheduled' && ` · sends ${fmtWhen(b.scheduled_at)}`}{b.started_at && ` · started ${fmtDate(b.started_at)}`}{b.finished_at && ` · finished ${fmtDate(b.finished_at)}`} · {b.rate_per_minute}/min{b.daily_cap ? `, ${b.daily_cap}/day` : ''} · image: {b.image === 'auto' ? 'chosen for you' : b.image || 'none'} · backend: {b.backend}</p>
       {b.status === 'draft' && (
         <div className="notice" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -187,7 +189,7 @@ function Detail({ id, onBack, onEdit }) {
             ))}
           </div>
           {b.status === 'sending' && <div style={{ background: 'var(--line)', borderRadius: 4, height: 8, margin: '12px 0' }}><div style={{ width: `${pct}%`, background: 'var(--navy-800)', height: 8, borderRadius: 4, transition: 'width .5s' }} /></div>}
-          {sandbox && <div className="notice"><p><strong>SES is still in the sandbox.</strong> Addresses that aren&rsquo;t verified in SES are rejected with "not verified" — that is AWS, not a bad address. Request production access (ops/email-setup.md step 5), then these can be re-queued.</p></div>}
+          {sandbox && <div className="notice"><p><strong>SES is still in the sandbox.</strong> Addresses that aren&rsquo;t verified in SES are rejected with "not verified" — that is AWS, not a bad address. Get production access (ops/email-setup.md §5 or the CloudShell script in §7), then click <strong>Retry failed</strong> and <strong>Resume</strong>.</p></div>}
           {rows && (
             <>
               <h3 style={{ marginTop: 16 }}>{filter || 'all'} ({rows.length})</h3>

@@ -68,7 +68,7 @@ async function runBlast(id) {
       const [[b]] = await pool.query('SELECT status FROM blasts WHERE id = ?', [id]);
       if (!b || b.status !== 'sending') break;
       const [[r]] = await pool.query("SELECT * FROM blast_recipients WHERE blast_id = ? AND status = 'queued' ORDER BY id LIMIT 1", [id]);
-      if (!r) { await pool.execute("UPDATE blasts SET status = 'done', finished_at = NOW() WHERE id = ?", [id]); break; }
+      if (!r) { await pool.execute("UPDATE blasts SET status = 'done', finished_at = NOW(), note = NULL WHERE id = ?", [id]); break; }
       const [[blast]] = await pool.query('SELECT * FROM blasts WHERE id = ?', [id]);
       if (blast.daily_cap > 0) {
         // The cap is the SES account quota, so count every blast's sends today.
@@ -84,6 +84,12 @@ async function runBlast(id) {
         if (r.contact_email_id) await pool.execute("UPDATE contact_emails SET status = 'sent', status_at = NOW() WHERE id = ? AND status = 'unverified'", [r.contact_email_id]);
       } catch (err) {
         const msg = str(err.message, 300);
+        // SES sandbox: only verified addresses are deliverable. Pause with a
+        // note and leave the row queued; Resume after production access.
+        if (/not verified/i.test(msg)) {
+          await pool.execute("UPDATE blasts SET status = 'paused', note = ? WHERE id = ?", ['Paused: SES is still in the sandbox (recipients must be verified). Get production access, then Resume.', id]);
+          console.warn('[blast]', id, 'paused: SES sandbox'); break;
+        }
         // Throttling / quota from SES: leave the row queued and back off rather than burn the queue.
         if (/throttl|rate exceeded|Too many|quota|sending limit/i.test(msg)) { console.warn('[blast]', id, 'backing off:', msg); await new Promise(res => setTimeout(res, 60 * 1000)); continue; }
         await pool.execute("UPDATE blast_recipients SET status = 'failed', error = ? WHERE id = ?", [msg, r.id]);
@@ -208,6 +214,15 @@ admin.post('/blasts/:id/send', async (req, res, next) => {
     res.status(out.error ? 400 : 200).json(out);
   } catch (err) { next(err); }
 });
+// Put failed rows back in the queue (e.g. after leaving the SES sandbox).
+admin.post('/blasts/:id/requeue', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const [r] = await pool.execute("UPDATE blast_recipients SET status = 'queued', error = NULL WHERE blast_id = ? AND status = 'failed'", [id]);
+    await pool.execute("UPDATE blasts SET failed = 0, note = NULL, status = IF(status = 'done', 'paused', status), finished_at = NULL WHERE id = ?", [id]);
+    res.json({ ok: true, requeued: r.affectedRows });
+  } catch (err) { next(err); }
+});
 admin.post('/blasts/:id/unschedule', async (req, res, next) => {
   try { await pool.execute("UPDATE blasts SET status = 'draft', scheduled_at = NULL WHERE id = ? AND status = 'scheduled'", [Number(req.params.id)]); res.json({ ok: true }); }
   catch (err) { next(err); }
@@ -218,7 +233,8 @@ admin.post('/blasts/:id/pause', async (req, res, next) => {
   catch (err) { next(err); }
 });
 admin.post('/blasts/:id/resume', async (req, res, next) => {
-  try { const id = Number(req.params.id); await pool.execute("UPDATE blasts SET status = 'sending' WHERE id = ? AND status = 'paused'", [id]); runBlast(id); res.json({ ok: true }); }
+  try {
+    await pool.execute('UPDATE blasts SET note = NULL WHERE id = ?', [Number(req.params.id)]); const id = Number(req.params.id); await pool.execute("UPDATE blasts SET status = 'sending' WHERE id = ? AND status = 'paused'", [id]); runBlast(id); res.json({ ok: true }); }
   catch (err) { next(err); }
 });
 
