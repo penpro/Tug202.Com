@@ -9,6 +9,7 @@
 //   node scripts/blast.js send <id> --rate 20 --cap 180   # set pacing first (per minute / per day)
 //   node scripts/blast.js pause|resume|unschedule <id>
 //   node scripts/blast.js test <id> you@example.com
+//   node scripts/blast.js sync-bounces [days]           # pull SES suppression list (default 30 days)
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const BASE = `http://127.0.0.1:${process.env.PORT || 3202}/api/admin`;
@@ -48,7 +49,8 @@ const fmt = (b) => `#${b.id}  ${b.status.padEnd(9)} ${String(b.sent || 0).padSta
       break;
     }
     case 'pause': case 'resume': case 'unschedule': await call(`/blasts/${id}/${cmd}`, 'POST', {}); console.log(cmd + 'd'); break;
+    case 'sync-bounces': { const out = await call('/blasts/sync-bounces', 'POST', { days: Number(idArg) || 30 }); console.log(`SES suppression list: ${out.seen} entries checked, ${out.bounced} newly marked bounced, ${out.complained} complaints`); break; }
     case 'test': { const out = await call(`/blasts/${id}/test`, 'POST', { to: rest[0] }); console.log('test sent to', out.to || rest[0]); break; }
-    default: console.error('usage: blast.js list | status <id> | send <id> [--at "YYYY-MM-DD HH:MM"] [--rate N] [--cap N] | pause|resume|unschedule <id> | test <id> <email>'); process.exit(1);
+    default: console.error('usage: blast.js list | status <id> | send <id> [--at "YYYY-MM-DD HH:MM"] [--rate N] [--cap N] | pause|resume|unschedule <id> | test <id> <email> | sync-bounces [days]'); process.exit(1);
   }
 })().catch(err => { console.error('error:', err.message); process.exit(1); });

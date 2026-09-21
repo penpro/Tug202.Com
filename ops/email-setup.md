@@ -95,6 +95,8 @@ ssh -i 202.pem ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com 'grep -q SES_CO
 
 SES also emails bounce notices to the From address by default; that's harmless noise (nothing receives at no-reply@) and can be turned off under Identities → tug202.org → Notifications → *Email feedback forwarding*.
 
+**Belt and braces:** independently of the webhook, the server pulls SES's account-level *suppression list* (every address that hard-bounced or complained) every hour and marks those addresses `bounced`/`unsubscribed`. The CloudShell script grants the instance role the one extra permission this needs. Pull it on demand with `node scripts/blast.js sync-bounces 30`. Blasts also refuse to send if the configuration set is missing (they pause with a note) so mail never goes out untracked.
+
 **Where it shows up:** Contacts tab → the address's status becomes `bounced` with a timestamp, and the blast's detail page counts it under *bounced*. `buildAudience` excludes bounced/unsubscribed addresses from every future blast automatically.
 
 ## 8. Inbound mail — `info@tug202.org`

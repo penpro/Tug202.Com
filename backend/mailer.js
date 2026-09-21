@@ -11,11 +11,13 @@ const from = () => process.env.SMTP_FROM || '"Tug Comanche Foundation" <no-reply
 let backend = null;
 let warnedSet = false;
 if (process.env.SES_REGION) {
-  const { SESv2Client, SendEmailCommand } = require('@aws-sdk/client-sesv2');
+  const { SESv2Client, SendEmailCommand, ListSuppressedDestinationsCommand } = require('@aws-sdk/client-sesv2');
   const ses = new SESv2Client({ region: process.env.SES_REGION });
   backend = {
     name: 'ses',
-    async deliver({ to, subject, text, html, replyTo, headers }) {
+    // requireTracking: blasts set this so a missing configuration set is an
+    // error (they'd otherwise go out with bounce tracking silently off).
+    async deliver({ to, subject, text, html, replyTo, headers, requireTracking }) {
       const params = (withSet) => ({
         FromEmailAddress: from(),
         Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
@@ -32,9 +34,22 @@ if (process.env.SES_REGION) {
       } catch (err) {
         // SES_CONFIG_SET is pre-set before the set exists; degrade rather than fail.
         if (!/configuration set/i.test(err.message)) throw err;
+        if (requireTracking) throw new Error(`SES configuration set '${process.env.SES_CONFIG_SET}' not found — bounce tracking would be off. Run ops/ses-bounce-setup.sh in CloudShell.`);
         if (!warnedSet) { console.warn('[mail] SES configuration set not found; sending without it (bounce tracking off)'); warnedSet = true; }
         return (await ses.send(new SendEmailCommand(params(false)))).MessageId;
       }
+    },
+    // SES's account-level suppression list: every address that hard-bounced or
+    // complained, whether or not the SNS webhook saw it. Yields
+    // { email, reason: 'BOUNCE'|'COMPLAINT', at: Date }. Needs
+    // ses:ListSuppressedDestinations on the instance role.
+    async *suppressed(since) {
+      let NextToken;
+      do {
+        const out = await ses.send(new ListSuppressedDestinationsCommand({ StartDate: since || undefined, PageSize: 1000, NextToken }));
+        for (const d of out.SuppressedDestinationSummaries || []) yield { email: d.EmailAddress.toLowerCase(), reason: d.Reason, at: d.LastUpdateTime };
+        NextToken = out.NextToken;
+      } while (NextToken);
     }
   };
 } else if (process.env.SMTP_HOST) {
@@ -73,4 +88,4 @@ async function deliver(msg) {
   return backend.deliver(msg);
 }
 
-module.exports = { notify, send, deliver, backendName: backend?.name || 'none' };
+module.exports = { notify, send, deliver, suppressed: backend?.suppressed, backendName: backend?.name || 'none' };

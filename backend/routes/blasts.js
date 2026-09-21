@@ -2,7 +2,7 @@ const express = require('express');
 const https = require('https');
 const pool = require('../db');
 const { str, email } = require('../validate');
-const { deliver, backendName } = require('../mailer');
+const { deliver, suppressed, backendName } = require('../mailer');
 const { render, verifyUnsubToken, HERO_POOL } = require('../mail-template');
 
 // ---------------------------------------------------------------------------
@@ -77,7 +77,7 @@ async function runBlast(id) {
       }
       try {
         const m = render(blast, r);
-        const mid = await deliver({ to: r.email, subject: m.subject, text: m.text, html: m.html,
+        const mid = await deliver({ to: r.email, subject: m.subject, text: m.text, html: m.html, requireTracking: !!process.env.SES_CONFIG_SET,
           headers: { 'List-Unsubscribe': `<${m.unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } });
         await pool.execute("UPDATE blast_recipients SET status = 'sent', message_id = ?, sent_at = NOW() WHERE id = ?", [mid || null, r.id]);
         await pool.execute('UPDATE blasts SET sent = sent + 1 WHERE id = ?', [id]);
@@ -86,6 +86,10 @@ async function runBlast(id) {
         const msg = str(err.message, 300);
         // SES sandbox: only verified addresses are deliverable. Pause with a
         // note and leave the row queued; Resume after production access.
+        if (/configuration set/i.test(msg)) {
+          await pool.execute("UPDATE blasts SET status = 'paused', note = ? WHERE id = ?", ['Paused: ' + msg, id]);
+          console.warn('[blast]', id, 'paused:', msg); break;
+        }
         if (/not verified/i.test(msg)) {
           await pool.execute("UPDATE blasts SET status = 'paused', note = ? WHERE id = ?", ['Paused: SES is still in the sandbox (recipients must be verified). Get production access, then Resume.', id]);
           console.warn('[blast]', id, 'paused: SES sandbox'); break;
@@ -112,6 +116,37 @@ async function startBlast(id) {
   runBlast(id);
   return { ok: true, total: list.length };
 }
+
+// Pull SES's suppression list and mark those addresses here. Runs hourly and
+// on demand; independent of the SNS webhook, so bounces are never lost.
+let lastSync = null;
+async function syncSuppression(sinceDays) {
+  if (!suppressed) return { error: 'SES not configured' };
+  const since = sinceDays ? new Date(Date.now() - sinceDays * 86400e3) : (lastSync ? new Date(lastSync.getTime() - 3600e3) : null);
+  let seen = 0, bounced = 0, complained = 0;
+  for await (const d of suppressed(since)) {
+    seen++;
+    const [[known]] = await pool.query('SELECT 1 FROM contact_emails WHERE email = ? UNION SELECT 1 FROM blast_recipients WHERE email = ? UNION SELECT 1 FROM newsletter_subscribers WHERE email = ? LIMIT 1', [d.email, d.email, d.email]);
+    if (!known) continue;
+    await pool.execute('INSERT INTO ses_events (event_type, message_id, email, detail) VALUES (?, NULL, ?, ?)', ['suppression-' + d.reason.toLowerCase(), d.email, JSON.stringify(d)]);
+    if (d.reason === 'COMPLAINT') {
+      await unsubscribe(d.email);
+      await pool.execute("UPDATE contact_emails SET status_note = 'complaint' WHERE email = ?", [d.email]);
+      await pool.execute("UPDATE blast_recipients SET status = 'complained' WHERE email = ? AND status = 'sent'", [d.email]);
+      complained++;
+    } else {
+      const [r] = await pool.execute("UPDATE contact_emails SET status = 'bounced', status_at = NOW(), status_note = 'SES suppression list' WHERE email = ? AND status <> 'bounced'", [d.email]);
+      await pool.execute("UPDATE blast_recipients SET status = 'bounced' WHERE email = ? AND status = 'sent'", [d.email]);
+      if (r.affectedRows) bounced++;
+    }
+  }
+  lastSync = new Date();
+  const out = { seen, bounced, complained, at: lastSync };
+  console.log('[ses] suppression sync', JSON.stringify(out));
+  return out;
+}
+setTimeout(() => syncSuppression(30).catch(e => console.error('[ses] suppression sync failed:', e.message)), 10 * 1000);
+setInterval(() => syncSuppression().catch(e => console.error('[ses] suppression sync failed:', e.message)), 60 * 60 * 1000);
 
 // Resume anything left 'sending' after a restart, and start scheduled blasts
 // whose time has come (checked every minute).
@@ -214,6 +249,12 @@ admin.post('/blasts/:id/send', async (req, res, next) => {
     res.status(out.error ? 400 : 200).json(out);
   } catch (err) { next(err); }
 });
+// Manual bounce sync: POST /admin/blasts/sync-bounces { days: 30 }
+admin.post('/blasts/sync-bounces', async (req, res, next) => {
+  try { const out = await syncSuppression(Number(req.body?.days) || 30); res.status(out.error ? 400 : 200).json(out); }
+  catch (err) { next(err); }
+});
+
 // Put failed rows back in the queue (e.g. after leaving the SES sandbox).
 admin.post('/blasts/:id/requeue', async (req, res, next) => {
   try {
@@ -308,4 +349,4 @@ pub.post('/ses/events', express.text({ type: '*/*', limit: '256kb' }), async (re
   } catch (err) { console.error('[ses:events]', err.message); res.status(400).end(); }
 });
 
-module.exports = { admin, pub, startBlast, buildAudience };
+module.exports = { admin, pub, startBlast, buildAudience, syncSuppression };
