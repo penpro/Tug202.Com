@@ -33,7 +33,7 @@ Sanity check before DNS: `curl -H "Host: tug202.org" http://<EC2-IP>/api/health`
 Two separate things:
 
 - **Inbound `info@tug202.org`** — set up at the DNS provider (Cloudflare Email Routing, ImprovMX, or Google Workspace). Not handled by this server.
-- **Outbound (invites, resets, form notifications)** — Gmail SMTP with an app password. Google Account → Security → 2-Step Verification → App passwords → create one, then run `ssh -t -i 202.pem ubuntu@<host> ~/Tug202.Com/ops/set-smtp.sh` and paste it when prompted; the script writes `.env`, restarts the backend and sends a test. Gmail caps at ~500 msgs/day — fine for transactional mail; newsletter blasts belong in a bulk tool. Amazon SES is the upgrade path if volume grows.
+- **Outbound (invites, resets, form notifications)** — Amazon SES via the EC2 instance role. Setup walkthrough is in `ops/email-setup.md`. `ops/set-smtp.sh` remains as a Gmail-app-password fallback.
 
 Until SMTP is set, form submissions still land in MySQL and are visible via the `/api/admin/*` endpoints.
 
