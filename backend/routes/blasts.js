@@ -218,7 +218,7 @@ admin.post('/blasts/:id/send', async (req, res, next) => {
 admin.post('/blasts/:id/requeue', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const [r] = await pool.execute("UPDATE blast_recipients SET status = 'queued', error = NULL WHERE blast_id = ? AND status = 'failed'", [id]);
+    const [r] = await pool.execute("UPDATE blast_recipients SET status = 'queued', error = '' WHERE blast_id = ? AND status = 'failed'", [id]);
     await pool.execute("UPDATE blasts SET failed = 0, note = NULL, status = IF(status = 'done', 'paused', status), finished_at = NULL WHERE id = ?", [id]);
     res.json({ ok: true, requeued: r.affectedRows });
   } catch (err) { next(err); }
