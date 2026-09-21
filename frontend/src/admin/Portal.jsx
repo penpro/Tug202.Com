@@ -7,6 +7,7 @@ import Contacts from './Contacts.jsx'
 import Inbox from './Inbox.jsx'
 import News from './News.jsx'
 import Users from './Users.jsx'
+import Mail from './Mail.jsx'
 
 // ---------------------------------------------------------------------------
 // /admin — board portal. Session-cookie auth (see backend/auth.js).
@@ -33,6 +34,7 @@ function Shell({ user, onSignOut }) {
     { to: '/admin/inbox', label: 'Inbox' },
     { to: '/admin/contacts', label: 'Contacts' },
     { to: '/admin/news', label: 'News' },
+    { to: '/admin/mail', label: 'Mail' },
     ...(user.role === 'admin' ? [{ to: '/admin/users', label: 'Users' }] : []),
     { to: '/admin/account', label: 'Account' }
   ]
@@ -51,6 +53,7 @@ function Shell({ user, onSignOut }) {
         <Route path="inbox" element={<Inbox />} />
         <Route path="contacts" element={<Contacts />} />
         <Route path="news" element={<News />} />
+        <Route path="mail" element={<Mail />} />
         <Route path="users" element={user.role === 'admin' ? <Users me={user} /> : <Navigate to="/admin" replace />} />
         <Route path="account" element={<Account user={user} />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />

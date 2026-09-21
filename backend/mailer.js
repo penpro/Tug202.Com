@@ -14,13 +14,19 @@ if (process.env.SES_REGION) {
   const ses = new SESv2Client({ region: process.env.SES_REGION });
   backend = {
     name: 'ses',
-    async deliver({ to, subject, text, replyTo }) {
-      await ses.send(new SendEmailCommand({
+    async deliver({ to, subject, text, html, replyTo, headers }) {
+      const r = await ses.send(new SendEmailCommand({
         FromEmailAddress: from(),
         Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
         ReplyToAddresses: replyTo ? [replyTo] : undefined,
-        Content: { Simple: { Subject: { Data: subject, Charset: 'UTF-8' }, Body: { Text: { Data: text, Charset: 'UTF-8' } } } }
+        ConfigurationSetName: process.env.SES_CONFIG_SET || undefined,
+        Content: { Simple: {
+          Subject: { Data: subject, Charset: 'UTF-8' },
+          Body: { Text: { Data: text, Charset: 'UTF-8' }, ...(html ? { Html: { Data: html, Charset: 'UTF-8' } } : {}) },
+          Headers: headers ? Object.entries(headers).map(([Name, Value]) => ({ Name, Value })) : undefined
+        } }
       }));
+      return r.MessageId;
     }
   };
 } else if (process.env.SMTP_HOST) {
@@ -30,7 +36,7 @@ if (process.env.SES_REGION) {
     secure: Number(process.env.SMTP_PORT) === 465,
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
   });
-  backend = { name: 'smtp', deliver: ({ to, subject, text, replyTo }) => transport.sendMail({ from: from(), to, subject, text, replyTo }) };
+  backend = { name: 'smtp', deliver: async ({ to, subject, text, html, replyTo, headers }) => (await transport.sendMail({ from: from(), to, subject, text, html, replyTo, headers })).messageId };
 }
 
 // Notification to the board (NOTIFY_EMAIL, comma-separated). Never throws.
@@ -53,4 +59,10 @@ async function send(to, subject, text) {
   catch (err) { console.error('[mail:error]', err.message); return false; }
 }
 
-module.exports = { notify, send, backendName: backend?.name || 'none' };
+// Raw delivery for the blast sender: throws on failure, returns the message id.
+async function deliver(msg) {
+  if (!backend) throw new Error('No mail backend configured');
+  return backend.deliver(msg);
+}
+
+module.exports = { notify, send, deliver, backendName: backend?.name || 'none' };

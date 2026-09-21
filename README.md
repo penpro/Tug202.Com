@@ -85,7 +85,7 @@ curl -H "Authorization: Bearer $T" "https://tug202.org/api/admin/contacts-list/e
 curl -H "Authorization: Bearer $T" -H 'Content-Type: application/json' -d '{"emails":["a@b.com","c@d.com"]}' https://tug202.org/api/admin/contacts-list/bounces
 ```
 
-Workflow for the first blast: export unverified → send from the mail tool → `mark-sent` the list → paste bounce addresses into `bounces` → the next export contains only survivors. Confirmed replies get `status=confirmed`.
+Blasts are sent from the portal's **Mail** tab (branded template, audience picker, per-recipient log). SES bounces flow back through the SNS webhook (`ops/email-setup.md` §7) and mark addresses `bounced` automatically; the old CSV export / paste-bounces route still works as a fallback.
 
 Notification emails go to `NOTIFY_EMAIL` once SMTP is configured in `backend/.env`; rows are saved to MySQL regardless.
 

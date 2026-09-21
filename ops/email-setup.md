@@ -66,7 +66,21 @@ ssh -i 202.pem ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com 'cd ~/Tug202.Co
 
 Expect `backend: ses` then `sent to …`. If it says `not authorized`, the role isn't attached yet; `Email address is not verified` means step 1 or 2 hasn't finished.
 
-## 7. Inbound mail — `info@tug202.org`
+## 7. Bounce & complaint tracking (for mail blasts)
+
+The portal's **Mail** tab marks an address `sent` when SES accepts it, but a bad address bounces *later*. SES reports that to us through an SNS topic and a webhook on the server, which flips the address to `bounced` (or `unsubscribed` on a spam complaint) so it's never mailed again. One-time setup:
+
+1. **SNS → Topics → Create topic** → Standard → name `tug202-ses-events` → Create.
+2. On that topic → **Create subscription** → Protocol **HTTPS** → Endpoint `https://tug202.org/api/ses/events` → Create subscription. The server confirms it automatically within a few seconds (Status shows *Confirmed*; if it stays *Pending*, check `pm2 logs tug202-backend`).
+3. **SES → Configuration sets → Create set** → name `tug202` → Create. Open it → **Event destinations → Add destination** → tick **Hard bounces** and **Complaints** (Deliveries optional) → Next → destination **Amazon SNS**, topic `tug202-ses-events` → name `sns` → Add destination.
+4. Tell the app to send through that set — on the server:
+   ```bash
+   ssh -i 202.pem ubuntu@ec2-54-147-143-249.compute-1.amazonaws.com 'echo "SES_CONFIG_SET=tug202" >> ~/Tug202.Com/backend/.env && pm2 restart tug202-backend --update-env'
+   ```
+
+SES also emails bounce notices to the From address by default; that's harmless noise (nothing receives at no-reply@) and can be turned off under Identities → tug202.org → Notifications → *Email feedback forwarding*.
+
+## 8. Inbound mail — `info@tug202.org`
 
 SES only handles *sending* above. Receiving mail at the domain is a separate choice:
 
@@ -79,6 +93,7 @@ Until one of those exists, `info@tug202.org` on the website bounces. The contact
 
 ```
 SES_REGION=us-east-1
+SES_CONFIG_SET=tug202          # after step 7
 SMTP_FROM="Tug Comanche Foundation" <no-reply@tug202.org>
 NOTIFY_EMAIL=wesleyaweaverjr@gmail.com
 ```

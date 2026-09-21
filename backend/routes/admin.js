@@ -3,6 +3,7 @@ const pool = require('../db');
 const contactsRouter = require('./contacts');
 const { requireAuth, users: usersRouter } = require('../auth');
 const newsAdminRouter = require('./newsAdmin');
+const { admin: blastsAdmin } = require('./blasts');
 const peopleRouter = require('./people');
 
 // Everything under /api/admin needs a signed-in portal user (see auth.js).
@@ -13,6 +14,7 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(usersRouter);
 router.use(newsAdminRouter);
+router.use(blastsAdmin);
 router.use(contactsRouter);
 router.use(peopleRouter);
 
