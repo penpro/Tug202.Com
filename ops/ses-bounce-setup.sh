@@ -6,6 +6,7 @@
 # finishes, set SES_CONFIG_SET=tug202 in backend/.env (see email-setup.md §7).
 set -euo pipefail
 export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+export AWS_PAGER=""   # no "less" prompt in CloudShell
 TOPIC=tug202-ses-events
 SET=tug202
 ENDPOINT=https://tug202.org/api/ses/events
