@@ -34,8 +34,8 @@ const newCode = () => Array.from(crypto.randomBytes(8)).map(b => ALPHABET[b % AL
 const eventUrl = (code) => `${SITE()}/e/${code}`;
 
 const PUBLIC_COLS = `id, kind, sail_date, end_date, boarding_at, depart_at, return_at, disembark_at,
-  title, location, capacity, description, route, donation, sponsor, sponsor_info, bring, goals,
-  signup_code, published, status`;
+  title, location, capacity, description, route, donation, donation_amount, donation_per,
+  sponsor, sponsor_info, bring, goals, signup_code, published, status`;
 
 // What the admin form may set. Times and dates are validated; everything else
 // is trimmed text.
@@ -56,6 +56,8 @@ function fields(b) {
     description: str(b.description, 8000),
     route: kind === 'cruise' ? str(b.route, 800) : '',
     donation: kind === 'cruise' ? str(b.donation, 120) : '',
+    donation_amount: kind === 'cruise' && Number(b.donation_amount) > 0 ? Number(b.donation_amount).toFixed(2) : null,
+    donation_per: b.donation_per === 'party' ? 'party' : 'person',
     sponsor: kind === 'cruise' ? str(b.sponsor, 160) : '',
     sponsor_info: kind === 'cruise' ? str(b.sponsor_info, 8000) : '',
     bring: kind === 'workday' ? str(b.bring, 800) : '',
@@ -278,6 +280,14 @@ pub.post('/event/:code/register', async (req, res, next) => {
       }
     }
 
+    // What we suggested, and whether they kept the box ticked. This is an
+    // intention to give, never a payment — Givebutter is the record of money.
+    const pledged = !!b.pledge;
+    const per = Number(e.donation_amount) || 0;
+    const pledgeAmount = pledged && per > 0
+      ? (e.donation_per === 'party' ? per : per * adults).toFixed(2)
+      : null;
+
     const known = (await pool.query(
       'SELECT 1 AS hit FROM contact_emails WHERE email = ? UNION SELECT 1 FROM newsletter_subscribers WHERE email = ? LIMIT 1', [addr, addr]))[0][0];
 
@@ -294,14 +304,14 @@ pub.post('/event/:code/register', async (req, res, next) => {
 
     const [existing] = await pool.query('SELECT id FROM sailing_checkins WHERE sailing_id = ? AND email = ?', [e.id, addr]);
     if (existing.length) {
-      await pool.execute('UPDATE sailing_checkins SET name = ?, adults = ?, minor_count = ?, party_size = ?, bringing = ?, skills = ?, waiver_id = COALESCE(waiver_id, ?) WHERE id = ?',
-        [name, adults, minors, adults + minors, str(b.bringing, 300), str(b.skills, 300), waiver?.id || null, existing[0].id]);
+      await pool.execute('UPDATE sailing_checkins SET name = ?, adults = ?, minor_count = ?, party_size = ?, bringing = ?, skills = ?, pledged = ?, pledge_amount = ?, waiver_id = COALESCE(waiver_id, ?) WHERE id = ?',
+        [name, adults, minors, adults + minors, str(b.bringing, 300), str(b.skills, 300), pledged ? 1 : 0, pledgeAmount, waiver?.id || null, existing[0].id]);
     } else {
       await pool.execute(
-        `INSERT INTO sailing_checkins (sailing_id, waiver_id, name, email, adults, minor_count, party_size, role, registered_at, method, bringing, skills)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'prereg', ?, ?)`,
+        `INSERT INTO sailing_checkins (sailing_id, waiver_id, name, email, adults, minor_count, party_size, role, registered_at, method, bringing, skills, pledged, pledge_amount)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'prereg', ?, ?, ?, ?)`,
         [e.id, waiver?.id || null, name, addr, adults, minors, adults + minors,
-          e.kind === 'workday' ? 'volunteer' : 'guest', str(b.bringing, 300), str(b.skills, 300)]);
+          e.kind === 'workday' ? 'volunteer' : 'guest', str(b.bringing, 300), str(b.skills, 300), pledged ? 1 : 0, pledgeAmount]);
     }
 
     const needsWaiver = e.kind === 'cruise' && !waiver;
@@ -325,6 +335,7 @@ pub.post('/event/:code/register', async (req, res, next) => {
     res.json({
       ok: true, known: !!known, needsWaiver,
       pass_code: waiver?.pass_code || null,
+      pledge_amount: pledgeAmount,
       message: needsWaiver
         ? 'You’re on the list. Check your email — there is one more step: sign the boarding waiver and we’ll send your QR boarding pass.'
         : e.kind === 'cruise'

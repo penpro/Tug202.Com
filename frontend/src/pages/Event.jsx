@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Seo from '../components/Seo.jsx'
-import { org } from '../site.config.js'
+import { org, donate } from '../site.config.js'
 
 // /e/:code — the public page a QR poster or a news link leads to. One page for
 // both kinds of event: a cruise shows times, route and suggested donation; a
@@ -100,11 +100,29 @@ export default function Event() {
   )
 }
 
+const money = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: Number(n) % 1 ? 2 : 0, maximumFractionDigits: 2 })
+
+// Where to send someone once they are registered: nowhere if they declined or
+// there is nothing to ask for, the waiver (carrying the amount onward) if one
+// is outstanding, otherwise straight to the donation page.
+function giveUrl(out, pledge, total, event) {
+  if (!pledge || !(total > 0) || !donate.onlineUrl) return null
+  const amount = Math.round(total)
+  return out?.needsWaiver
+    ? `/waiver?sailing=${event.id}&donate=${amount}`
+    : `${donate.onlineUrl}?amount=${amount}`
+}
+
 function SignupForm({ code, event }) {
   const cruise = event.kind === 'cruise'
-  const [f, setF] = useState({ name: '', email: '', phone: '', adults: 1, minor_count: 0, bringing: '', skills: '', optin: true, website: '' })
+  const per = Number(event.donation_amount) || 0
+  const [f, setF] = useState({ name: '', email: '', phone: '', adults: 1, minor_count: 0, bringing: '', skills: '', optin: true, pledge: true, website: '' })
   const [state, setState] = useState({ status: 'idle', message: '', out: null })
   const set = (k) => (e) => setF(x => ({ ...x, [k]: e.target.value }))
+
+  // What we are asking this party for, given how many are coming.
+  const adults = Math.max(1, Number(f.adults) || 1)
+  const total = per > 0 ? (event.donation_per === 'party' ? per : per * adults) : 0
 
   const submit = async (e) => {
     e.preventDefault()
@@ -116,12 +134,31 @@ function SignupForm({ code, event }) {
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Something went wrong')
       setState({ status: 'ok', message: d.message, out: d })
+      // They are on the list and the confirmation is sent. Now push the
+      // donation — but never at the cost of the waiver: if one is still
+      // needed, the waiver comes first and hands them on to the donation
+      // afterwards. Somebody who leaves for Givebutter unsigned turns up at
+      // the brow needing the tablet, which is the queue we are avoiding.
+      const next = giveUrl(d, f.pledge, total, event)
+      if (next) setTimeout(() => { window.location.href = next }, 1400)
     } catch (err) { setState({ status: 'err', message: err.message, out: null }) }
   }
 
-  if (state.status === 'ok') return (
+  if (state.status === 'ok') {
+    const next = giveUrl(state.out, f.pledge, total, event)
+    const giving = !!next
+    const viaWaiver = giving && state.out?.needsWaiver
+    return (
     <div className="notice" style={{ marginTop: 0 }}>
       <h2 style={{ fontSize: '1.2rem', marginTop: 0 }}>You&rsquo;re on the list</h2>
+      {giving && (
+        <div className="form-msg ok" style={{ marginTop: 0 }}>
+          {viaWaiver
+            ? <>Taking you to the boarding waiver &mdash; it takes a minute, then straight on to your <strong>{money(total)}</strong> donation.{' '}</>
+            : <>Taking you to the donation page for <strong>{money(total)}</strong>&hellip;{' '}</>}
+          <a href={next}>go there now</a>
+        </div>
+      )}
       <p>{state.message}</p>
       {state.out?.needsWaiver && (
         <p><a className="btn btn-primary" href={`/waiver?sailing=${event.id}`}>Sign the waiver &amp; get your pass</a></p>
@@ -133,8 +170,12 @@ function SignupForm({ code, event }) {
           <br /><code style={{ fontSize: '1.4rem', letterSpacing: '.12em' }}>{state.out.pass_code}</code>
         </p>
       )}
+      {!giving && total > 0 && donate.onlineUrl && (
+        <p><a className="btn btn-primary" href={`${donate.onlineUrl}?amount=${Math.round(total)}`}>Chip in {money(total)} after all</a></p>
+      )}
     </div>
   )
+  }
 
   return (
     <form className="form" onSubmit={submit} style={{ maxWidth: 'none', border: '1px solid var(--line)', borderRadius: 6, padding: 18, background: '#fff' }}>
@@ -152,12 +193,26 @@ function SignupForm({ code, event }) {
         <div><label htmlFor="ev-bring">Anything you can bring?</label><input id="ev-bring" value={f.bringing} onChange={set('bringing')} placeholder="Grinder, extension cord, a truck…" /></div>
         <div><label htmlFor="ev-skills">Anything you&rsquo;re handy at?</label><input id="ev-skills" value={f.skills} onChange={set('skills')} placeholder="Welding, diesel, painting, cooking…" /></div>
       </>}
+      {total > 0 && (
+        <label className="check" style={{ background: '#fff6f3', border: '1px solid var(--line)', borderRadius: 6, padding: '10px 12px' }}>
+          <input type="checkbox" checked={f.pledge} onChange={e => setF(x => ({ ...x, pledge: e.target.checked }))} />
+          <span>
+            <strong>Yes, I&rsquo;ll give the suggested donation &mdash; {money(total)}</strong>
+            <br /><span className="small">
+              {event.donation_per === 'party' ? 'For your whole party. ' : `${money(per)} each for ${adults} adult${adults === 1 ? '' : 's'}. `}
+              We&rsquo;ll take you to the donation page as soon as you sign up. It costs about $100 a
+              mile to move her, and donations are what keep her moving &mdash; but they are voluntary,
+              and unticking this box changes nothing about your place aboard.
+            </span>
+          </span>
+        </label>
+      )}
       <label className="check"><input type="checkbox" checked={f.optin} onChange={e => setF(x => ({ ...x, optin: e.target.checked }))} />
         <span>Keep me posted about the ship &mdash; news, work days and cruises</span></label>
       <div className="hp" aria-hidden="true"><label htmlFor="ev-web">Website</label><input id="ev-web" tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} /></div>
       {state.status === 'err' && <div className="form-msg err">{state.message}</div>}
       <div><button className="btn btn-primary" type="submit" disabled={state.status === 'sending'}>
-        {state.status === 'sending' ? 'Signing up…' : 'Sign me up'}</button></div>
+        {state.status === 'sending' ? 'Signing up…' : (f.pledge && total > 0 ? `Sign up & give ${money(total)}` : 'Sign me up')}</button></div>
       <p className="small">
         {cruise
           ? 'Everyone aboard signs a liability waiver once a season. If yours is already on file we’ll just send your pass.'

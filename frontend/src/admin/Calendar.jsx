@@ -75,7 +75,8 @@ const blank = (kind) => ({
   kind, sail_date: new Date().toISOString().slice(0, 10), end_date: '', title: '', location: '', capacity: '',
   boarding_at: kind === 'cruise' ? '09:00' : '', depart_at: kind === 'cruise' ? '10:00' : '',
   return_at: kind === 'cruise' ? '15:00' : '', disembark_at: kind === 'cruise' ? '15:30' : '',
-  description: '', route: '', donation: '', sponsor: '', sponsor_info: '', bring: '', goals: '', notes: '', status: 'planned'
+  description: '', route: '', donation: '', donation_amount: '', donation_per: 'person',
+  sponsor: '', sponsor_info: '', bring: '', goals: '', notes: '', status: 'planned'
 })
 
 function EventForm({ row, onDone }) {
@@ -163,8 +164,22 @@ function EventForm({ row, onDone }) {
               </div>
               <div><label>Proposed route</label><textarea style={{ minHeight: 60 }} value={f.route} onChange={set('route')} placeholder="Out of Budd Inlet, north past Boston Harbor, around Hope Island and back." /></div>
               <div className="row">
-                <div><label>Recommended donation</label><input value={f.donation} onChange={set('donation')} placeholder="$75 per person" /></div>
+                <div><label>Recommended donation <span className="small">(as worded on the page)</span></label>
+                  <input value={f.donation} onChange={set('donation')} placeholder="$75 per person" /></div>
                 <div><label>Sponsor</label><input value={f.sponsor} onChange={set('sponsor')} placeholder="Partner organization" /></div>
+              </div>
+              <div className="row">
+                <div><label>Amount to ask for <span className="small">(0 = don&rsquo;t ask)</span></label>
+                  <input type="number" min={0} step="1" value={f.donation_amount ?? ''} onChange={set('donation_amount')} placeholder="75" /></div>
+                <div><label>Charged</label>
+                  <select value={f.donation_per || 'person'} onChange={set('donation_per')}>
+                    <option value="person">per adult</option><option value="party">per party</option>
+                  </select></div>
+              </div>
+              <div className="small">
+                With an amount set, the sign-up page shows a pre-ticked box for the total and sends
+                people to Givebutter the moment they sign up. They can untick it, and the place is
+                theirs either way &mdash; she is not a charter vessel.
               </div>
               <div><label>From the sponsor <span className="small">(their words, shown on the page)</span></label>
                 <textarea style={{ minHeight: 90 }} value={f.sponsor_info} onChange={set('sponsor_info')} /></div>
@@ -236,6 +251,7 @@ function EventForm({ row, onDone }) {
                     <td className="small">
                       {r.adults} ad{r.minor_count ? `, ${r.minor_count} ch` : ''}
                       {cruise && <><br />{r.pass_code ? <code>{r.pass_code}</code> : <span style={{ color: 'var(--stripe)' }}>no waiver</span>}</>}
+                      {r.pledged === 1 && <div style={{ color: '#1f6b2a' }}>pledged {r.pledge_amount ? `$${Number(r.pledge_amount).toFixed(0)}` : 'the suggested donation'}</div>}
                       {r.bringing && <div>brings: {r.bringing}</div>}
                       {r.skills && <div>skills: {r.skills}</div>}
                     </td>

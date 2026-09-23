@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Seo from '../components/Seo.jsx'
 import SignaturePad from '../components/SignaturePad.jsx'
-import { org } from '../site.config.js'
+import { org, donate } from '../site.config.js'
 
 // /waiver — sign the boarding release before you come, and get a QR boarding
 // pass by email. The same component runs the tablet at the brow (?kiosk=1),
@@ -12,6 +12,9 @@ export default function Waiver() {
   const [params] = useSearchParams()
   const kiosk = params.get('kiosk') === '1'
   const sailingId = params.get('sailing') || ''
+  // Carried over from an event sign-up: how much they said they would give.
+  // Never on the kiosk — a donation page at the brow holds up the queue.
+  const donateAmount = kiosk ? 0 : Math.max(0, Number(params.get('donate')) || 0)
 
   const [text, setText] = useState(null)
   const [f, setF] = useState(blank())
@@ -63,7 +66,7 @@ export default function Waiver() {
     } catch (err) { setState({ status: 'err', message: err.message }) }
   }
 
-  if (state.status === 'done' && state.pass) return <Done pass={state.pass} />
+  if (state.status === 'done' && state.pass) return <Done pass={state.pass} donateAmount={donateAmount} />
 
   return (
     <section className="section" ref={top}><div className="container" style={{ maxWidth: 820 }}>
@@ -180,12 +183,27 @@ const blank = () => ({
   guardian: false, photo_ok: true, optin: false, agree: false, website: ''
 })
 
-function Done({ pass }) {
+function Done({ pass, donateAmount }) {
+  const giveUrl = donateAmount > 0 && donate.onlineUrl ? `${donate.onlineUrl}?amount=${donateAmount}` : null
+  // Long enough to see the pass and know it exists, short enough that the
+  // handover to the donation page still feels like one flow.
+  useEffect(() => {
+    if (!giveUrl) return
+    const t = setTimeout(() => { window.location.href = giveUrl }, 6000)
+    return () => clearTimeout(t)
+  }, [giveUrl])
+
   return (
     <section className="section"><div className="container" style={{ maxWidth: 560, textAlign: 'center' }}>
       <Seo title="Your boarding pass" noindex />
       <span className="eyebrow">Signed</span>
       <h1>You&rsquo;re on the list</h1>
+      {giveUrl && (
+        <div className="form-msg ok">
+          Your pass is below and in your email. Taking you to the donation page for{' '}
+          <strong>${donateAmount}</strong> in a moment &mdash; <a href={giveUrl}>go now</a>.
+        </div>
+      )}
       <p className="lead">
         {pass.emailed ? 'Your boarding pass is on its way by email. ' : ''}
         Show this code at the brow and a crew member will check you aboard.
@@ -194,6 +212,7 @@ function Done({ pass }) {
         style={{ width: 'min(70vw, 260px)', height: 'auto', border: '10px solid #fff', outline: '1px solid var(--line)', margin: '6px 0 10px' }} />
       <p style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: '2rem', letterSpacing: '.14em', margin: 0 }}>{pass.pass_code}</p>
       <p className="small">Save this page: <a href={pass.pass_url}>{pass.pass_url}</a></p>
+      {giveUrl && <p><a className="btn btn-primary" href={giveUrl}>Give ${donateAmount} now</a></p>}
       <div className="notice" style={{ textAlign: 'left', marginTop: 18 }}>
         <p style={{ marginTop: 0 }}><strong>Before you come:</strong></p>
         <ul>
