@@ -78,6 +78,7 @@ export function Sailing({ id, onBack }) {
   const [d, setD] = useState(null); const [err, setErr] = useState(''); const [scanning, setScanning] = useState(false)
   const [flash, setFlash] = useState(null); const [manual, setManual] = useState('')
   const [walkup, setWalkup] = useState({ role: 'guest', adults: 1, minor_count: 0 })
+  const [showManifest, setShowManifest] = useState(false)
   const timer = useRef(null)
 
   const load = async () => { try { setD(await api(`/admin/sailings/${id}`)) } catch (e) { setErr(e.message) } }
@@ -137,8 +138,13 @@ export function Sailing({ id, onBack }) {
           {scanning ? 'Close scanner' : '📷 Scan boarding passes'}
         </button>
         <a className="btn btn-outline" href={`/waiver?kiosk=1&sailing=${id}`} target="_blank" rel="noreferrer">Open tablet sign-in</a>
-        <a className="btn btn-outline" href={`/api/admin/sailings/${id}/manifest`} target="_blank" rel="noreferrer">📋 Manifest PDF</a>
+        <button className={showManifest ? 'btn btn-primary' : 'btn btn-outline'} onClick={() => setShowManifest(v => !v)}>
+          {showManifest ? 'Hide manifest' : '📋 View manifest'}
+        </button>
+        <a className="btn btn-outline" href={`/api/admin/sailings/${id}/manifest`} target="_blank" rel="noreferrer">PDF</a>
       </div>
+
+      {showManifest && <ManifestView sailing={s} roster={roster} counts={counts} id={id} />}
 
       {scanning && <Scanner onCode={(code) => checkIn({ code })} onError={(m) => m && setFlash({ ok: false, error: m })} />}
       {flash && <Flash flash={flash} onClose={() => setFlash(null)} />}
@@ -212,6 +218,73 @@ export function Sailing({ id, onBack }) {
           ))}
         </tbody></table>
       </>}
+    </div>
+  )
+}
+
+// The manifest on screen: the same thing the PDF says, live, for when a
+// boarding officer is standing in front of you and a phone is what you have.
+function ManifestView({ sailing, roster, counts, id }) {
+  const aboard = roster.filter(r => r.checked_in_at && !r.checked_out_at)
+  const ashore = roster.filter(r => r.checked_out_at)
+  const isCrew = (r) => r.role === 'crew' || r.role === 'volunteer'
+  const kids = (r) => (r.minor_names || []).map(m => `${m.name}${m.age != null ? ` (${m.age})` : ''}`).join(', ')
+
+  const Rows = ({ list, out }) => (
+    <table className="spec" style={{ fontSize: '0.9rem', marginBottom: 10 }}>
+      <tbody>
+        <tr style={{ background: 'var(--paper)' }}>
+          <th style={{ width: '32%' }}>Name</th><th>Role</th><th>Ad</th><th>Ch</th><th>{out ? 'Ashore' : 'Aboard'}</th>
+        </tr>
+        {list.map(r => (
+          <tr key={r.id}>
+            <th style={{ fontWeight: 400 }}>
+              {r.name}
+              {kids(r) && <div className="small">with {kids(r)}</div>}
+              {r.emergency_name && <div className="small">ICE: {r.emergency_name} {r.emergency_phone}</div>}
+            </th>
+            <td className="small">{isCrew(r) ? (r.role === 'volunteer' ? 'volunteer' : 'crew') : 'passenger'}</td>
+            <td><strong>{r.adults}</strong></td>
+            <td><strong>{r.minor_count || 0}</strong></td>
+            <td className="small">{clock(out ? r.checked_out_at : r.checked_in_at)}{!out && !r.pass_code && <div style={{ color: 'var(--stripe)' }}>no waiver</div>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+
+  return (
+    <div style={{ border: '1px solid var(--line)', borderTop: '4px solid var(--stripe)', borderRadius: 6, background: '#fff', padding: '16px 18px', margin: '12px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Passenger and crew manifest</h3>
+          <div className="small">M/V COMANCHE (ex-USCGC COMANCHE, WMEC-202) &middot; {day(sailing.sail_date)}{sailing.location && ` · ${sailing.location}`}</div>
+        </div>
+        <div className="small">as of {new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} &middot;{' '}
+          <a href={`/api/admin/sailings/${id}/manifest`} target="_blank" rel="noreferrer">signed PDF</a></div>
+      </div>
+
+      <div className="stats" style={{ gridTemplateColumns: 'repeat(4, 1fr)', margin: '12px 0' }}>
+        <div className="stat"><div className="stat-n">{counts.passengers}</div><div className="stat-l">passengers</div></div>
+        <div className="stat"><div className="stat-n">{counts.crew}</div><div className="stat-l">crew</div></div>
+        <div className="stat"><div className="stat-n">{counts.children}</div><div className="stat-l">children</div></div>
+        <div className="stat" style={{ background: '#fff6f3', borderColor: 'var(--stripe)' }}>
+          <div className="stat-n" style={{ color: 'var(--stripe)' }}>{counts.aboard}</div><div className="stat-l">souls on board</div></div>
+      </div>
+
+      <h4 style={{ margin: '0 0 4px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--navy-800)' }}>On board ({aboard.length})</h4>
+      {aboard.length ? <Rows list={aboard} /> : <p className="small">Nobody checked in.</p>}
+
+      {ashore.length > 0 && <>
+        <h4 style={{ margin: '0 0 4px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--navy-800)' }}>Went ashore ({ashore.length})</h4>
+        <Rows list={ashore} out />
+      </>}
+
+      <p className="small" style={{ marginBottom: 0 }}>
+        Children are persons under 18, aboard in the care of the named adult. Comanche carries no
+        passengers for hire; those aboard are guests and volunteers. This view updates itself every
+        few seconds &mdash; the PDF is the copy to hand over and sign.
+      </p>
     </div>
   )
 }
