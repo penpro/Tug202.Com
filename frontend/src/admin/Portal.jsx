@@ -9,7 +9,7 @@ import News from './News.jsx'
 import Users from './Users.jsx'
 import Mail from './Mail.jsx'
 import Receipts from './Receipts.jsx'
-import Sailings from './Sailings.jsx'
+import Calendar from './Calendar.jsx'
 import Waivers from './Waivers.jsx'
 
 // ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ function Shell({ user, onSignOut }) {
     { to: '/admin', label: 'Dashboard', end: true },
     { to: '/admin/inbox', label: 'Inbox' },
     { to: '/admin/contacts', label: 'Contacts' },
-    { to: '/admin/sailings', label: 'Sailings' },
+    { to: '/admin/calendar', label: 'Calendar' },
     { to: '/admin/waivers', label: 'Waivers' },
     { to: '/admin/receipts', label: 'Receipts' },
     { to: '/admin/news', label: 'News' },
@@ -58,7 +58,7 @@ function Shell({ user, onSignOut }) {
         <Route index element={<Dashboard />} />
         <Route path="inbox" element={<Inbox />} />
         <Route path="contacts" element={<Contacts />} />
-        <Route path="sailings" element={<Sailings />} />
+        <Route path="calendar" element={<Calendar />} />
         <Route path="waivers" element={<Waivers />} />
         <Route path="receipts" element={<Receipts me={user} />} />
         <Route path="news" element={<News />} />

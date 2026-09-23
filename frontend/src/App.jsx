@@ -12,6 +12,7 @@ import Support from './pages/Support.jsx'
 import Receipt from './pages/Receipt.jsx'
 import Waiver from './pages/Waiver.jsx'
 import Pass from './pages/Pass.jsx'
+import Event from './pages/Event.jsx'
 import Contact from './pages/Contact.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Portal from './admin/Portal.jsx'
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="receipt" element={<Receipt />} />
         <Route path="waiver" element={<Waiver />} />
         <Route path="pass/:code" element={<Pass />} />
+        <Route path="e/:code" element={<Event />} />
         <Route path="contact" element={<Contact />} />
         <Route path="admin/*" element={<Portal />} />
         <Route path="*" element={<NotFound />} />

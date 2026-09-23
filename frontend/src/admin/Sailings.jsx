@@ -74,7 +74,7 @@ function NewSailing({ onDone }) {
   )
 }
 
-function Sailing({ id, onBack }) {
+export function Sailing({ id, onBack }) {
   const [d, setD] = useState(null); const [err, setErr] = useState(''); const [scanning, setScanning] = useState(false)
   const [flash, setFlash] = useState(null); const [manual, setManual] = useState('')
   const [walkup, setWalkup] = useState({ role: 'guest', adults: 1, minor_count: 0 })
