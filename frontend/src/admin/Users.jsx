@@ -32,7 +32,7 @@ export default function Users({ me }) {
         <div className="row" style={{ gridTemplateColumns: '1.4fr 1fr 0.7fr auto', alignItems: 'end' }}>
           <div><label>Email *</label><input type="email" required value={f.email} onChange={e => setF({ ...f, email: e.target.value })} /></div>
           <div><label>Name</label><input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></div>
-          <div><label>Role</label><select value={f.role} onChange={e => setF({ ...f, role: e.target.value })}><option value="editor">editor</option><option value="admin">admin</option></select></div>
+          <div><label>Role</label><select value={f.role} onChange={e => setF({ ...f, role: e.target.value })}><option value="editor">editor</option><option value="inventory">inventory</option><option value="admin">admin</option></select></div>
           <div><button className="btn btn-primary" type="submit">Invite</button></div>
         </div>
       </form>
@@ -56,7 +56,7 @@ export default function Users({ me }) {
             <div className="admin-row" style={{ cursor: 'default', gridTemplateColumns: '1.4fr 1fr auto' }}>
               <div className="admin-name">
                 <strong>{u.name || <em>no name yet</em>}</strong>
-                <span className="pill" style={{ background: u.role === 'admin' ? 'var(--stripe)' : 'var(--navy-700)' }}>{u.role}</span>
+                <span className="pill" style={{ background: u.role === 'admin' ? 'var(--stripe)' : u.role === 'inventory' ? '#5b6b3a' : 'var(--navy-700)' }}>{u.role}</span>
                 {!u.is_active && <span className="pill" style={{ background: '#555' }}>disabled</span>}
                 {!u.has_password && u.is_active && <span className="pill" style={{ background: '#a2823a' }}>invite pending</span>}
                 <div className="small">{u.email}{u.id === me.id && ' (you)'}</div>
@@ -64,7 +64,10 @@ export default function Users({ me }) {
               <div className="small">{u.last_login_at ? `last sign-in ${fmtDate(u.last_login_at)}` : 'never signed in'}</div>
               <div className="btn-row" style={{ marginTop: 0 }}>
                 {u.id !== me.id && <>
-                  <button className="linkbtn" onClick={() => patch(u, { role: u.role === 'admin' ? 'editor' : 'admin' })}>{u.role === 'admin' ? 'make editor' : 'make admin'}</button>
+                  <select value={u.role} onChange={e => patch(u, { role: e.target.value })} aria-label={`Role for ${u.email}`}
+                    style={{ padding: '1px 4px', fontSize: '0.78rem' }}>
+                    <option value="editor">editor</option><option value="inventory">inventory</option><option value="admin">admin</option>
+                  </select>
                   <button className="linkbtn" onClick={() => patch(u, { is_active: !u.is_active })}>{u.is_active ? 'disable' : 'enable'}</button>
                 </>}
                 <button className="linkbtn" onClick={() => resetLink(u)}>{u.has_password ? 'reset link' : 'new invite link'}</button>

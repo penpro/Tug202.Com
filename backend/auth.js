@@ -140,7 +140,7 @@ users.get('/users', async (req, res, next) => {
 users.post('/users', async (req, res, next) => {
   try {
     const e = email(req.body?.email); const name = str(req.body?.name, 120);
-    const role = req.body?.role === 'admin' ? 'admin' : 'editor';
+    const role = ['admin', 'editor', 'inventory'].includes(req.body?.role) ? req.body.role : 'editor';
     if (!e) return res.status(400).json({ error: 'Valid email required' });
     const [[exists]] = await pool.query('SELECT id FROM users WHERE email = ?', [e]);
     if (exists) return res.status(409).json({ error: 'That email already has an account' });
@@ -161,14 +161,14 @@ users.post('/users', async (req, res, next) => {
 users.patch('/users/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id); const b = req.body || {};
-    if (id === req.user.id && (b.role === 'editor' || b.is_active === false)) return res.status(400).json({ error: "You can't demote or deactivate yourself" });
+    if (id === req.user.id && ((b.role && b.role !== 'admin') || b.is_active === false)) return res.status(400).json({ error: "You can't demote or deactivate yourself" });
     const sets = []; const args = [];
-    if (b.role === 'admin' || b.role === 'editor') { sets.push('role = ?'); args.push(b.role); }
+    if (['admin', 'editor', 'inventory'].includes(b.role)) { sets.push('role = ?'); args.push(b.role); }
     if ('is_active' in b) { sets.push('is_active = ?'); args.push(b.is_active ? 1 : 0); }
     if ('name' in b) { sets.push('name = ?'); args.push(str(b.name, 120)); }
     if (!sets.length) return res.status(400).json({ error: 'nothing to update' });
     // Never let the last active admin be removed.
-    if (b.role === 'editor' || b.is_active === false) {
+    if ((b.role && b.role !== 'admin') || b.is_active === false) {
       const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM users WHERE role = "admin" AND is_active = 1 AND id <> ?', [id]);
       if (n === 0) return res.status(400).json({ error: 'That would leave no active admin' });
     }

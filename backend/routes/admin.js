@@ -9,6 +9,7 @@ const dmarcRouter = require('./dmarc');
 const { admin: receiptsAdmin } = require('./receipts');
 const { admin: boardingAdmin } = require('./boarding');
 const { admin: eventsAdmin } = require('./events');
+const inventoryRouter = require('./inventory');
 
 // Everything under /api/admin needs a signed-in portal user (see auth.js).
 // The static ADMIN_TOKEN bearer still works for curl scripts.
@@ -16,6 +17,15 @@ const { admin: eventsAdmin } = require('./events');
 const router = express.Router();
 
 router.use(requireAuth);
+
+// An inventory account is exactly that: it can work the inventory and nothing
+// else. Everyone else carries on as before.
+router.use((req, res, next) => {
+  if (req.user?.role !== 'inventory') return next();
+  if (/^\/inventory(\/|$)/.test(req.path)) return next();
+  res.status(403).json({ error: 'Your account only has access to the inventory.' });
+});
+router.use(inventoryRouter);
 router.use(usersRouter);
 router.use(newsAdminRouter);
 router.use(blastsAdmin);

@@ -11,6 +11,7 @@ import Mail from './Mail.jsx'
 import Receipts from './Receipts.jsx'
 import Calendar from './Calendar.jsx'
 import Waivers from './Waivers.jsx'
+import Inventory from './Inventory.jsx'
 
 // ---------------------------------------------------------------------------
 // /admin — board portal. Session-cookie auth (see backend/auth.js).
@@ -32,11 +33,17 @@ export default function Portal() {
 function Shell({ user, onSignOut }) {
   const nav = useNavigate()
   const signOut = async () => { await api('/auth/logout', { method: 'POST' }).catch(() => {}); onSignOut(); nav('/admin') }
-  const tabs = [
+  // An inventory account sees the inventory and its own account, nothing else
+  // — the backend enforces the same thing.
+  const tabs = user.role === 'inventory' ? [
+    { to: '/admin', label: 'Inventory', end: true },
+    { to: '/admin/account', label: 'Account' }
+  ] : [
     { to: '/admin', label: 'Dashboard', end: true },
     { to: '/admin/inbox', label: 'Inbox' },
     { to: '/admin/contacts', label: 'Contacts' },
     { to: '/admin/calendar', label: 'Calendar' },
+    { to: '/admin/inventory', label: 'Inventory' },
     { to: '/admin/waivers', label: 'Waivers' },
     { to: '/admin/receipts', label: 'Receipts' },
     { to: '/admin/news', label: 'News' },
@@ -55,7 +62,8 @@ function Shell({ user, onSignOut }) {
         {tabs.map(t => <NavLink key={t.to} to={t.to} end={t.end}>{t.label}</NavLink>)}
       </nav>
       <Routes>
-        <Route index element={<Dashboard />} />
+        <Route index element={user.role === 'inventory' ? <Inventory me={user} /> : <Dashboard />} />
+        <Route path="inventory" element={<Inventory me={user} />} />
         <Route path="inbox" element={<Inbox />} />
         <Route path="contacts" element={<Contacts />} />
         <Route path="calendar" element={<Calendar />} />
