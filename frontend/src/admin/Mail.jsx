@@ -8,7 +8,8 @@ import { api, fmtDate } from './api.js'
 const STATUS_COLOR = { draft: '#7a8190', scheduled: '#5b6b8a', sending: '#1d4278', paused: '#a2823a', done: '#1f6b2a', failed: '#b8321f' }
 const fmtWhen = (d) => new Date(d).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
 const blankBlast = () => ({
-  subject: '', preheader: '', image: 'auto', cta_label: 'Donate', cta_url: 'https://tug202.org/support', rate_per_minute: 30, daily_cap: 0,
+  subject: '', preheader: '', image: 'auto', cta_label: 'Donate', cta_url: 'https://tug202.org/support',
+  topic: 'newsletter', confirm_button: true, rate_per_minute: 30, daily_cap: 0,
   body: 'Hi {{first_name|there}},\n\nA few years ago you signed up for updates about the historic tug Comanche — maybe at Olympia Harbor Days, in Bremerton, or aboard the ship. A lot has happened since, and we wanted to reconnect.\n\nThe ship is now cared for by a new nonprofit, the Tug Comanche Historical Rescue Foundation, and she is still underway under her own power. We have a new website with the full story: https://tug202.org\n\nIf you would rather not hear from us, there is an unsubscribe link at the bottom and we will take you off the list right away.\n\nThank you for being part of Comanche\'s story.\n\n— The Comanche crew',
   audience: { source: 'crm', statuses: ['unverified'], kinds: ['primary'], confidence: [], tag: '' }
 })
@@ -16,11 +17,11 @@ const blankBlast = () => ({
 export default function Mail() {
   const [list, setList] = useState(null); const [err, setErr] = useState('')
   const [view, setView] = useState({ mode: 'list' }) // list | edit | detail
-  const [pool, setPool] = useState([])
-  const load = () => api('/admin/blasts').then(d => { setList(d.blasts); setPool(d.heroPool || []) }).catch(e => setErr(e.message))
+  const [pool, setPool] = useState([]); const [groups, setGroups] = useState([])
+  const load = () => api('/admin/blasts').then(d => { setList(d.blasts); setPool(d.heroPool || []); setGroups(d.groups || []) }).catch(e => setErr(e.message))
   useEffect(() => { load() }, [])
 
-  if (view.mode === 'edit') return <Composer initial={view.blast} pool={pool} onDone={(id) => { load(); setView(id ? { mode: 'detail', id } : { mode: 'list' }) }} />
+  if (view.mode === 'edit') return <Composer initial={view.blast} pool={pool} groups={groups} onDone={(id) => { load(); setView(id ? { mode: 'detail', id } : { mode: 'list' }) }} />
   if (view.mode === 'detail') return <Detail id={view.id} openPreview={view.preview} onBack={() => { load(); setView({ mode: 'list' }) }} onEdit={(b) => setView({ mode: 'edit', blast: b })} />
 
   return (
@@ -36,7 +37,7 @@ export default function Mail() {
         {(list || []).map(b => (
           <div className="admin-person" key={b.id}>
             <div className="admin-row" style={{ gridTemplateColumns: '1.6fr 1fr auto' }} onClick={() => setView({ mode: 'detail', id: b.id })}>
-              <div className="admin-name"><strong>{b.subject}</strong><span className="pill" style={{ background: STATUS_COLOR[b.status] }}>{b.status}</span><div className="small">{fmtDate(b.created_at)}</div></div>
+              <div className="admin-name"><strong>{b.subject}</strong><span className="pill" style={{ background: STATUS_COLOR[b.status] }}>{b.status}</span>{b.topic && <span className="pill">{b.topic}</span>}<div className="small">{fmtDate(b.created_at)}</div></div>
               <div className="small">{b.status === 'draft' ? 'not sent' : b.status === 'scheduled' ? `sends ${fmtWhen(b.scheduled_at)}` : `${b.sent} sent · ${b.failed} failed · ${b.total} total`}</div>
               <div className="small" style={{ whiteSpace: 'nowrap' }}><span className="linkbtn" role="button" tabIndex={0} onClick={e => { e.stopPropagation(); setView({ mode: 'detail', id: b.id, preview: true }) }} onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); setView({ mode: 'detail', id: b.id, preview: true }) } }}>Preview</span> &rarr;</div>
             </div>
@@ -127,7 +128,7 @@ function Toolbar({ area, value, onChange }) {
   )
 }
 
-function Composer({ initial, pool, onDone }) {
+function Composer({ initial, pool, groups, onDone }) {
   const [b, setB] = useState(initial)
   const [preview, setPreview] = useState(null); const [tab, setTab] = useState('html')
   const [width, setWidth] = useState('desktop')
@@ -147,7 +148,7 @@ function Composer({ initial, pool, onDone }) {
         .finally(() => setRendering(false))
     }, 500)
     return () => clearTimeout(t)
-  }, [b.subject, b.preheader, b.body, b.image, b.cta_label, b.cta_url, b.id]) // eslint-disable-line
+  }, [b.subject, b.preheader, b.body, b.image, b.cta_label, b.cta_url, b.confirm_button, b.id]) // eslint-disable-line
 
   const save = async () => {
     setBusy(true); setErr('')
@@ -183,6 +184,15 @@ function Composer({ initial, pool, onDone }) {
             <div><label>Daily cap <span className="small">(0 = none)</span></label><input type="number" min={0} value={b.daily_cap ?? 0} onChange={e => setB({ ...b, daily_cap: Number(e.target.value) })} /></div>
           </div>
           <div className="small">Trickle defaults keep us under SES limits: 30/min is one every 2 s, so 250 addresses take about 8 minutes. The account ceiling is 50,000 a day and 14 a second.</div>
+          <div>
+            <label>Kind of mail <span className="small">(people who turned this topic off are skipped)</span></label>
+            <select value={b.topic || ''} onChange={e => setB({ ...b, topic: e.target.value })}>
+              <option value="">Any — send to everyone on the list</option>
+              {groups.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+            </select>
+            <div className="small" style={{ marginTop: 4 }}>{(groups.find(g => g.key === b.topic) || {}).hint || 'No topic filter: this goes to every reachable address, so keep it rare.'}</div>
+          </div>
+          <label className="check"><input type="checkbox" checked={b.confirm_button !== false && b.confirm_button !== 0} onChange={e => setB({ ...b, confirm_button: e.target.checked })} /> <span>Include the &ldquo;Yes, keep me on the list&rdquo; button <span className="small">— useful when re-establishing contact, noise on a normal newsletter</span></span></label>
           <AudiencePicker a={b.audience} onChange={audience => setB({ ...b, audience })} />
           {err && <div className={`form-msg ${/Test sent/.test(err) ? 'ok' : 'err'}`}>{err}</div>}
           <div className="btn-row">
@@ -269,7 +279,7 @@ function Detail({ id, openPreview, onBack, onEdit }) {
         <h2 style={{ fontSize: '1.6rem', marginBottom: 0 }}>{b.subject} <span className="pill" style={{ background: STATUS_COLOR[b.status] }}>{b.status}</span></h2>
         <div className="btn-row" style={{ marginTop: 0 }}>
           <button className={showPreview ? 'btn btn-primary' : 'btn btn-outline'} onClick={() => setShowPreview(v => !v)}>{showPreview ? 'Hide preview' : 'Preview'}</button>
-          {['draft', 'scheduled'].includes(b.status) && <button className="btn btn-outline" onClick={() => onEdit({ id: b.id, subject: b.subject, preheader: b.preheader, body: b.body, image: b.image || '', cta_label: b.cta_label, cta_url: b.cta_url, rate_per_minute: b.rate_per_minute, daily_cap: b.daily_cap, audience: b.audience })}>Edit</button>}
+          {['draft', 'scheduled'].includes(b.status) && <button className="btn btn-outline" onClick={() => onEdit({ id: b.id, subject: b.subject, preheader: b.preheader, body: b.body, image: b.image || '', cta_label: b.cta_label, cta_url: b.cta_url, topic: b.topic, confirm_button: !!b.confirm_button, rate_per_minute: b.rate_per_minute, daily_cap: b.daily_cap, audience: b.audience })}>Edit</button>}
           {b.status === 'draft' && <button className="btn btn-primary" onClick={() => act('send', 'Send this blast to the selected audience now? This cannot be undone.')}>Send now</button>}
           {b.status === 'scheduled' && <button className="btn btn-outline" onClick={() => act('unschedule')}>Cancel schedule</button>}
           {b.status === 'sending' && <button className="btn btn-outline" onClick={() => act('pause')}>Pause</button>}
@@ -280,7 +290,7 @@ function Detail({ id, openPreview, onBack, onEdit }) {
       </div>
       {err && <div className="form-msg err">{err}</div>}
       {b.note && <div className="form-msg err">{b.note}</div>}
-      <p className="small">Created {fmtDate(b.created_at)}{b.scheduled_at && b.status === 'scheduled' && ` · sends ${fmtWhen(b.scheduled_at)}`}{b.started_at && ` · started ${fmtDate(b.started_at)}`}{b.finished_at && ` · finished ${fmtDate(b.finished_at)}`} · {b.rate_per_minute}/min{b.daily_cap ? `, ${b.daily_cap}/day` : ''} · image: {b.image === 'auto' ? 'chosen for you' : b.image || 'none'} · backend: {b.backend}</p>
+      <p className="small">Created {fmtDate(b.created_at)}{b.scheduled_at && b.status === 'scheduled' && ` · sends ${fmtWhen(b.scheduled_at)}`}{b.started_at && ` · started ${fmtDate(b.started_at)}`}{b.finished_at && ` · finished ${fmtDate(b.finished_at)}`} · {b.topic ? `topic: ${b.topic}` : 'no topic filter'} · {b.rate_per_minute}/min{b.daily_cap ? `, ${b.daily_cap}/day` : ''} · image: {b.image === 'auto' ? 'chosen for you' : b.image || 'none'} · backend: {b.backend}</p>
       {b.status === 'draft' && (
         <div className="notice" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <strong>Or schedule it:</strong>

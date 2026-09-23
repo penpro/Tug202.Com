@@ -132,6 +132,13 @@ router.post('/newsletter', async (req, res, next) => {
       return res.status(400).json({ error: 'Pick at least one kind of email to receive.' });
     }
 
+    // mail_prefs is the one place blasts read topics from; keep it in step.
+    await pool.execute(
+      `INSERT INTO mail_prefs (email, newsletter, volunteer, events, reunions, source) VALUES (?, ?, ?, ?, ?, 'signup')
+       ON DUPLICATE KEY UPDATE newsletter = VALUES(newsletter), volunteer = VALUES(volunteer),
+         events = VALUES(events), reunions = VALUES(reunions), source = 'signup'`,
+      [from, prefs.newsletter ? 1 : 0, prefs.volunteer ? 1 : 0, prefs.events ? 1 : 0, prefs.reunions ? 1 : 0]);
+
     // Re-signup updates preferences (and clears an old unsubscribe) instead of erroring.
     await pool.execute(
       `INSERT INTO newsletter_subscribers

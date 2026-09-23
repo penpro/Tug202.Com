@@ -4,6 +4,7 @@ const pool = require('../db');
 const { str, email } = require('../validate');
 const { deliver, suppressed, backendName } = require('../mailer');
 const { render, verifyUnsubToken, verifyConfirmToken, HERO_POOL } = require('../mail-template');
+const { GROUPS, KEYS: GROUP_KEYS, isGroup, labelOf } = require('../mail-groups');
 
 // ---------------------------------------------------------------------------
 // Mail blasts.
@@ -32,7 +33,9 @@ const pub = express.Router();
 const SUPPRESSED = "SELECT DISTINCT email FROM contact_emails WHERE status IN ('bounced','unsubscribed') UNION SELECT DISTINCT email FROM blast_recipients WHERE status IN ('bounced','complained') UNION SELECT email FROM newsletter_subscribers WHERE unsubscribed_at IS NOT NULL";
 
 // ---- audience ---------------------------------------------------------------
-// audience: { source: 'crm'|'subscribers'|'both', statuses: [...], kinds: [...], tag, confidence: [...] }
+// audience: { source: 'crm'|'subscribers'|'both', statuses, kinds, tag, confidence, topic }
+// topic filters by mail group: an address is included unless it has explicitly
+// turned that group off in the preference centre.
 async function buildAudience(a) {
   const out = new Map(); // email -> { email, name, contact_email_id }
   const src = a.source || 'crm';
@@ -51,6 +54,10 @@ async function buildAudience(a) {
   if (src === 'subscribers' || src === 'both') {
     const [rows] = await pool.query('SELECT email, name FROM newsletter_subscribers WHERE unsubscribed_at IS NULL ORDER BY id');
     for (const r of rows) if (!out.has(r.email)) out.set(r.email, { email: r.email, name: r.name, contact_email_id: null });
+  }
+  if (isGroup(a.topic)) {
+    const [off] = await pool.query(`SELECT email FROM mail_prefs WHERE \`${a.topic}\` = 0`);
+    for (const r of off) out.delete(r.email);
   }
   const [sup] = await pool.query(SUPPRESSED);
   for (const s of sup) out.delete(s.email);
@@ -164,13 +171,14 @@ setInterval(tick, 60 * 1000);
 const fields = (b) => ({
   subject: str(b.subject, 200), preheader: str(b.preheader, 200), body: str(b.body, 50000), image: str(b.image, 120) || null,
   cta_label: str(b.cta_label, 60), cta_url: /^https?:\/\//.test(String(b.cta_url || '').trim()) ? str(b.cta_url, 300) : '',
+  topic: isGroup(b.topic) ? b.topic : '', confirm_button: b.confirm_button === false || b.confirm_button === 0 ? 0 : 1,
   rate_per_minute: Math.min(600, Math.max(1, Number(b.rate_per_minute) || 30)),
   daily_cap: Math.min(50000, Math.max(0, Number(b.daily_cap) || 0))
 });
 const parseWhen = (v) => { const d = v ? new Date(v) : null; return d && !isNaN(d) && d.getTime() > Date.now() ? d : null; };
 
 admin.get('/blasts', async (req, res, next) => {
-  try { const [rows] = await pool.query('SELECT id, subject, status, total, sent, failed, rate_per_minute, daily_cap, scheduled_at, created_at, started_at, finished_at FROM blasts ORDER BY id DESC'); res.json({ blasts: rows, heroPool: HERO_POOL }); }
+  try { const [rows] = await pool.query('SELECT id, subject, status, topic, total, sent, failed, rate_per_minute, daily_cap, scheduled_at, created_at, started_at, finished_at FROM blasts ORDER BY id DESC'); res.json({ blasts: rows, heroPool: HERO_POOL, groups: GROUPS }); }
   catch (err) { next(err); }
 });
 
@@ -189,8 +197,8 @@ admin.post('/blasts', async (req, res, next) => {
   try {
     const b = fields(req.body || {});
     if (!b.subject || !b.body) return res.status(400).json({ error: 'Subject and body required' });
-    const [r] = await pool.execute('INSERT INTO blasts (subject, preheader, body, image, cta_label, cta_url, audience, rate_per_minute, daily_cap, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [b.subject, b.preheader, b.body, b.image, b.cta_label, b.cta_url, JSON.stringify(req.body?.audience || { source: 'crm' }), b.rate_per_minute, b.daily_cap, req.user.id || null]);
+    const [r] = await pool.execute('INSERT INTO blasts (subject, preheader, body, image, cta_label, cta_url, topic, confirm_button, audience, rate_per_minute, daily_cap, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [b.subject, b.preheader, b.body, b.image, b.cta_label, b.cta_url, b.topic, b.confirm_button, JSON.stringify({ ...(req.body?.audience || { source: 'crm' }), topic: b.topic }), b.rate_per_minute, b.daily_cap, req.user.id || null]);
     res.status(201).json({ id: r.insertId });
   } catch (err) { next(err); }
 });
@@ -211,8 +219,8 @@ admin.patch('/blasts/:id', async (req, res, next) => {
     if (!b) return res.status(404).json({ error: 'Not found' });
     if (!['draft', 'scheduled'].includes(b.status)) return res.status(400).json({ error: 'Only drafts can be edited' });
     const f = fields(req.body || {});
-    await pool.execute('UPDATE blasts SET subject = ?, preheader = ?, body = ?, image = ?, cta_label = ?, cta_url = ?, audience = ?, rate_per_minute = ?, daily_cap = ? WHERE id = ?',
-      [f.subject, f.preheader, f.body, f.image, f.cta_label, f.cta_url, JSON.stringify(req.body?.audience || { source: 'crm' }), f.rate_per_minute, f.daily_cap, id]);
+    await pool.execute('UPDATE blasts SET subject = ?, preheader = ?, body = ?, image = ?, cta_label = ?, cta_url = ?, topic = ?, confirm_button = ?, audience = ?, rate_per_minute = ?, daily_cap = ? WHERE id = ?',
+      [f.subject, f.preheader, f.body, f.image, f.cta_label, f.cta_url, f.topic, f.confirm_button, JSON.stringify({ ...(req.body?.audience || { source: 'crm' }), topic: f.topic }), f.rate_per_minute, f.daily_cap, id]);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -289,22 +297,74 @@ admin.get('/blasts/:id/recipients', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ---- public: unsubscribe ------------------------------------------------------
+// ---- public: unsubscribe & preferences ---------------------------------------
+// Unsubscribe means all groups off, everywhere.
 async function unsubscribe(e) {
   await pool.execute("UPDATE contact_emails SET status = 'unsubscribed', status_at = NOW(), status_note = 'via link' WHERE email = ?", [e]);
   await pool.execute('UPDATE newsletter_subscribers SET unsubscribed_at = NOW() WHERE email = ? AND unsubscribed_at IS NULL', [e]);
+  await pool.execute(`INSERT INTO mail_prefs (email, ${GROUP_KEYS.join(', ')}, source) VALUES (?, ${GROUP_KEYS.map(() => 0).join(', ')}, 'unsub')
+    ON DUPLICATE KEY UPDATE ${GROUP_KEYS.map(k => `\`${k}\` = 0`).join(', ')}, source = 'unsub'`, [e]);
+}
+
+// Keep some groups, drop others. Empty selection == full unsubscribe.
+async function savePrefs(e, on) {
+  if (!on.length) return unsubscribe(e);
+  const vals = GROUP_KEYS.map(k => (on.includes(k) ? 1 : 0));
+  await pool.execute(`INSERT INTO mail_prefs (email, ${GROUP_KEYS.join(', ')}, source) VALUES (?, ${GROUP_KEYS.map(() => '?').join(', ')}, 'prefs')
+    ON DUPLICATE KEY UPDATE ${GROUP_KEYS.map(k => `\`${k}\` = VALUES(\`${k}\`)`).join(', ')}, source = 'prefs'`, [e, ...vals]);
+  // Still on the list: undo any earlier unsubscribe.
+  await pool.execute("UPDATE contact_emails SET status = 'confirmed', status_at = NOW(), status_note = 'chose topics' WHERE email = ? AND status = 'unsubscribed'", [e]);
+  await pool.execute('UPDATE newsletter_subscribers SET unsubscribed_at = NULL WHERE email = ?', [e]);
+  const cols = GROUP_KEYS.map(k => `pref_${k} = ?`).join(', ');
+  await pool.execute(`UPDATE newsletter_subscribers SET ${cols} WHERE email = ?`, [...vals, e]).catch(() => {});
+}
+
+async function prefsFor(e) {
+  const [[row]] = await pool.query('SELECT * FROM mail_prefs WHERE email = ?', [e]);
+  // No row = never narrowed it down = everything.
+  return Object.fromEntries(GROUP_KEYS.map(k => [k, row ? !!row[k] : true]));
 }
 
 const page = (title, body) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title>
-<style>body{font-family:Georgia,serif;background:#f6f1e7;color:#1a1f2b;margin:0;padding:40px 16px}.c{max-width:520px;margin:0 auto;background:#fffdf8;border-top:5px solid #d9422b;padding:28px 32px}h1{font-family:Arial,sans-serif;text-transform:uppercase;font-size:22px;color:#0b1f3a;margin:0 0 12px}a{color:#1d4278}.s{font-size:13px;color:#7a8190}</style></head>
+<style>body{font-family:Georgia,serif;background:#f6f1e7;color:#1a1f2b;margin:0;padding:40px 16px}.c{max-width:520px;margin:0 auto;background:#fffdf8;border-top:5px solid #d9422b;padding:28px 32px}h1{font-family:Arial,sans-serif;text-transform:uppercase;font-size:22px;color:#0b1f3a;margin:0 0 12px}a{color:#1d4278}.s{font-size:13px;color:#7a8190}.g{display:flex;gap:10px;align-items:flex-start;margin:10px 0}.g input{margin-top:5px}.b{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:.04em;padding:11px 20px;border:0;border-radius:4px;background:#0b1f3a;color:#fff;cursor:pointer}.b.out{background:none;border:1px solid #c3bcae;color:#7a8190;font-weight:normal}.ok{background:#e8f2e9;border-left:4px solid #1f6b2a;padding:8px 12px}form{margin:0}</style></head>
 <body><div class="c"><h1>${title}</h1>${body}<p class="s">Tug Comanche Historical Rescue Foundation · <a href="https://tug202.org">tug202.org</a></p></div></body></html>`;
+
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// The preference centre: pick the kinds of mail to keep, or leave entirely.
+// Reached from the footer link in every email.
+function prefsPage(e, t, prefs, saved) {
+  const boxes = GROUPS.map(g => `<label class="g"><input type="checkbox" name="g" value="${g.key}"${prefs[g.key] ? ' checked' : ''}>
+    <span><strong>${esc(g.label)}</strong><br><span class="s">${esc(g.hint)}</span></span></label>`).join('');
+  return page('Your email preferences', `
+    ${saved ? '<p class="ok">Saved. Thank you.</p>' : ''}
+    <p>For <strong>${esc(e)}</strong>. Tick what you would like to keep receiving:</p>
+    <form method="POST" action="/api/preferences?t=${encodeURIComponent(t)}">
+      ${boxes}
+      <p><button class="b" type="submit">Save my preferences</button></p>
+    </form>
+    <form method="POST" action="/api/unsubscribe?t=${encodeURIComponent(t)}">
+      <p><button class="b out" type="submit">Unsubscribe from everything</button></p>
+    </form>
+    <p class="s">We send a few emails a year and never sell your address.</p>`);
+}
 
 pub.get('/unsubscribe', async (req, res, next) => {
   try {
     const e = verifyUnsubToken(req.query.t);
-    if (!e) return res.status(400).type('html').send(page('Link not valid', '<p>This unsubscribe link is malformed. Reply to any of our emails with "unsubscribe" and we will remove you by hand.</p>'));
-    await unsubscribe(e);
-    res.type('html').send(page('You are unsubscribed', `<p><strong>${e.replace(/</g, '&lt;')}</strong> will not receive further mailings from us.</p><p>Changed your mind? You can <a href="https://tug202.org/support">sign up again</a> any time.</p>`));
+    if (!e) return res.status(400).type('html').send(page('Link not valid', '<p>This link is malformed. Reply to any of our emails with "unsubscribe" and we will remove you by hand.</p>'));
+    res.type('html').send(prefsPage(e, req.query.t, await prefsFor(e), false));
+  } catch (err) { next(err); }
+});
+
+pub.post('/preferences', express.urlencoded({ extended: false }), async (req, res, next) => {
+  try {
+    const e = verifyUnsubToken(req.query.t);
+    if (!e) return res.status(400).type('html').send(page('Link not valid', '<p>This link is malformed.</p>'));
+    const raw = req.body?.g; const on = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter(isGroup);
+    await savePrefs(e, on);
+    if (!on.length) return res.type('html').send(page('You are unsubscribed', `<p><strong>${esc(e)}</strong> will not receive further mailings from us.</p><p>Changed your mind? <a href="https://tug202.org/support">Sign up again</a> any time.</p>`));
+    res.type('html').send(prefsPage(e, req.query.t, await prefsFor(e), true));
   } catch (err) { next(err); }
 });
 // "Keep me on the list": flips the address to confirmed in the CRM (and the
@@ -322,9 +382,15 @@ pub.get('/confirm', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// RFC 8058 one-click (mail clients POST here).
+// RFC 8058 one-click (mail clients POST here); also the "unsubscribe from
+// everything" button on the preference page, which wants a page back.
 pub.post('/unsubscribe', express.urlencoded({ extended: false }), async (req, res, next) => {
-  try { const e = verifyUnsubToken(req.query.t); if (e) await unsubscribe(e); res.status(200).end(); } catch (err) { next(err); }
+  try {
+    const e = verifyUnsubToken(req.query.t);
+    if (e) await unsubscribe(e);
+    if (String(req.body?.['List-Unsubscribe'] || '').length || !req.get('accept')?.includes('text/html')) return res.status(200).end();
+    res.type('html').send(page('You are unsubscribed', `<p><strong>${esc(e || '')}</strong> will not receive further mailings from us.</p><p>Changed your mind? <a href="https://tug202.org/support">Sign up again</a> any time.</p>`));
+  } catch (err) { next(err); }
 });
 
 // ---- public: SES events via SNS ------------------------------------------------

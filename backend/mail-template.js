@@ -116,7 +116,7 @@ function render(blast, r) {
   </td></tr>` : '';
 
   // "Keep me on the list" button, unless the author placed {{confirm_url}} in the body themselves.
-  const confirmRow = /\{\{\s*confirm_url/.test(blast.body || '') ? '' : `<tr><td align="center" style="padding:4px 28px 26px">
+  const confirmRow = (blast.confirm_button === 0 || blast.confirm_button === false) || /\{\{\s*confirm_url/.test(blast.body || '') ? '' : `<tr><td align="center" style="padding:4px 28px 26px">
     <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#0b1f3a;border-radius:4px">
       <a href="${confirm}" style="display:inline-block;padding:12px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:#fff;text-decoration:none">&#10003; Yes, keep me on the list</a>
     </td></tr></table>
@@ -141,13 +141,14 @@ function render(blast, r) {
   ${confirmRow}
   <tr><td style="padding:8px 28px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#7a8190;border-top:1px solid #e6e0d3">
     <p style="margin:14px 0 8px">${esc(WHY)}</p>
-    <p style="margin:0 0 8px"><a href="${unsub}" style="color:#7a8190">Unsubscribe</a> &nbsp;&middot;&nbsp; <a href="${site}" style="color:#7a8190">tug202.org</a> &nbsp;&middot;&nbsp; <a href="${site}/support" style="color:#7a8190">Support the ship</a></p>
+    <p style="margin:0 0 8px"><a href="${unsub}" style="color:#7a8190">Choose which emails you get, or unsubscribe</a> &nbsp;&middot;&nbsp; <a href="${site}" style="color:#7a8190">tug202.org</a> &nbsp;&middot;&nbsp; <a href="${site}/support" style="color:#7a8190">Support the ship</a></p>
     <p style="margin:0">${ORG} &middot; Washington 501(c)(3) &middot; EIN 39-5018917 &middot; Auburn, Washington</p>
   </td></tr>
 </table></td></tr></table></body></html>`;
 
   const cta = ctaRow ? `\n\n${(blast.cta_label || 'Donate').toUpperCase()}: ${ctaUrl}` : '';
-  const text = `${bodyText(body)}${cta}\n\nStill want to hear from us? Confirm with one click: ${confirm}\n\n--\n${WHY}\nUnsubscribe: ${unsub}\n${ORG} · tug202.org · EIN 39-5018917 · Auburn, Washington\n`;
+  const stay = confirmRow ? `\n\nStill want to hear from us? Confirm with one click: ${confirm}` : '';
+  const text = `${bodyText(body)}${cta}${stay}\n\n--\n${WHY}\nChoose which emails you get, or unsubscribe: ${unsub}\n${ORG} · tug202.org · EIN 39-5018917 · Auburn, Washington\n`;
 
   return { subject, html, text, unsub, confirm };
 }

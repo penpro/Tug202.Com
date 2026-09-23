@@ -3,6 +3,8 @@ import useApiForm from './useApiForm.js'
 
 // Email-list signup with opt-in preferences. Used inline on the Support page
 // and inside the floating "Sign up" modal. Posts to /api/newsletter.
+// The same four groups the portal targets blasts at and the preference centre
+// offers (backend/mail-groups.js). Keep the keys in step if you add one.
 export const signupOptions = [
   { key: 'newsletter', label: 'Ship’s newsletter', hint: 'Restoration progress and Foundation news — a few emails a year' },
   { key: 'volunteer', label: 'Volunteer work-day calls', hint: 'When we need hands aboard: work parties, transits, event crew' },
