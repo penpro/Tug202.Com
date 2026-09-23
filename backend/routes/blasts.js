@@ -163,6 +163,7 @@ setInterval(tick, 60 * 1000);
 // ---- admin routes -------------------------------------------------------------
 const fields = (b) => ({
   subject: str(b.subject, 200), preheader: str(b.preheader, 200), body: str(b.body, 50000), image: str(b.image, 120) || null,
+  cta_label: str(b.cta_label, 60), cta_url: /^https?:\/\//.test(String(b.cta_url || '').trim()) ? str(b.cta_url, 300) : '',
   rate_per_minute: Math.min(600, Math.max(1, Number(b.rate_per_minute) || 30)),
   daily_cap: Math.min(50000, Math.max(0, Number(b.daily_cap) || 0))
 });
@@ -188,8 +189,8 @@ admin.post('/blasts', async (req, res, next) => {
   try {
     const b = fields(req.body || {});
     if (!b.subject || !b.body) return res.status(400).json({ error: 'Subject and body required' });
-    const [r] = await pool.execute('INSERT INTO blasts (subject, preheader, body, image, audience, rate_per_minute, daily_cap, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [b.subject, b.preheader, b.body, b.image, JSON.stringify(req.body?.audience || { source: 'crm' }), b.rate_per_minute, b.daily_cap, req.user.id || null]);
+    const [r] = await pool.execute('INSERT INTO blasts (subject, preheader, body, image, cta_label, cta_url, audience, rate_per_minute, daily_cap, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [b.subject, b.preheader, b.body, b.image, b.cta_label, b.cta_url, JSON.stringify(req.body?.audience || { source: 'crm' }), b.rate_per_minute, b.daily_cap, req.user.id || null]);
     res.status(201).json({ id: r.insertId });
   } catch (err) { next(err); }
 });
@@ -210,8 +211,8 @@ admin.patch('/blasts/:id', async (req, res, next) => {
     if (!b) return res.status(404).json({ error: 'Not found' });
     if (!['draft', 'scheduled'].includes(b.status)) return res.status(400).json({ error: 'Only drafts can be edited' });
     const f = fields(req.body || {});
-    await pool.execute('UPDATE blasts SET subject = ?, preheader = ?, body = ?, image = ?, audience = ?, rate_per_minute = ?, daily_cap = ? WHERE id = ?',
-      [f.subject, f.preheader, f.body, f.image, JSON.stringify(req.body?.audience || { source: 'crm' }), f.rate_per_minute, f.daily_cap, id]);
+    await pool.execute('UPDATE blasts SET subject = ?, preheader = ?, body = ?, image = ?, cta_label = ?, cta_url = ?, audience = ?, rate_per_minute = ?, daily_cap = ? WHERE id = ?',
+      [f.subject, f.preheader, f.body, f.image, f.cta_label, f.cta_url, JSON.stringify(req.body?.audience || { source: 'crm' }), f.rate_per_minute, f.daily_cap, id]);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

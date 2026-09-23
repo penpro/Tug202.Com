@@ -106,6 +106,15 @@ function render(blast, r) {
   const confirm = confirmUrl(r.email, r.blastId || blast.id);
   const site = SITE();
   const image = resolveImage(blast);
+  // Optional call-to-action button (donate, RSVP…): the loud one, in the
+  // stripe red, sitting right under the body.
+  const ctaUrl = String(blast.cta_url || '').trim();
+  const ctaRow = /^https?:\/\//.test(ctaUrl) ? `<tr><td align="center" style="padding:6px 28px 4px">
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#d9422b;border-radius:4px">
+      <a href="${esc(ctaUrl)}" style="display:inline-block;padding:15px 34px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#fff;text-decoration:none">${esc(merge(blast.cta_label || 'Donate', r))}</a>
+    </td></tr></table>
+  </td></tr>` : '';
+
   // "Keep me on the list" button, unless the author placed {{confirm_url}} in the body themselves.
   const confirmRow = /\{\{\s*confirm_url/.test(blast.body || '') ? '' : `<tr><td align="center" style="padding:4px 28px 26px">
     <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#0b1f3a;border-radius:4px">
@@ -128,6 +137,7 @@ function render(blast, r) {
   </td></tr>
   ${hero}
   <tr><td style="padding:28px 28px 8px">${bodyHtml(body)}</td></tr>
+  ${ctaRow}
   ${confirmRow}
   <tr><td style="padding:8px 28px 24px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#7a8190;border-top:1px solid #e6e0d3">
     <p style="margin:14px 0 8px">${esc(WHY)}</p>
@@ -136,7 +146,8 @@ function render(blast, r) {
   </td></tr>
 </table></td></tr></table></body></html>`;
 
-  const text = `${bodyText(body)}\n\nStill want to hear from us? Confirm with one click: ${confirm}\n\n--\n${WHY}\nUnsubscribe: ${unsub}\n${ORG} · tug202.org · EIN 39-5018917 · Auburn, Washington\n`;
+  const cta = ctaRow ? `\n\n${(blast.cta_label || 'Donate').toUpperCase()}: ${ctaUrl}` : '';
+  const text = `${bodyText(body)}${cta}\n\nStill want to hear from us? Confirm with one click: ${confirm}\n\n--\n${WHY}\nUnsubscribe: ${unsub}\n${ORG} · tug202.org · EIN 39-5018917 · Auburn, Washington\n`;
 
   return { subject, html, text, unsub, confirm };
 }

@@ -8,7 +8,7 @@ import { api, fmtDate } from './api.js'
 const STATUS_COLOR = { draft: '#7a8190', scheduled: '#5b6b8a', sending: '#1d4278', paused: '#a2823a', done: '#1f6b2a', failed: '#b8321f' }
 const fmtWhen = (d) => new Date(d).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
 const blankBlast = () => ({
-  subject: '', preheader: '', image: 'auto', rate_per_minute: 30, daily_cap: 0,
+  subject: '', preheader: '', image: 'auto', cta_label: 'Donate', cta_url: 'https://tug202.org/support', rate_per_minute: 30, daily_cap: 0,
   body: 'Hi {{first_name|there}},\n\nA few years ago you signed up for updates about the historic tug Comanche — maybe at Olympia Harbor Days, in Bremerton, or aboard the ship. A lot has happened since, and we wanted to reconnect.\n\nThe ship is now cared for by a new nonprofit, the Tug Comanche Historical Rescue Foundation, and she is still underway under her own power. We have a new website with the full story: https://tug202.org\n\nIf you would rather not hear from us, there is an unsubscribe link at the bottom and we will take you off the list right away.\n\nThank you for being part of Comanche\'s story.\n\n— The Comanche crew',
   audience: { source: 'crm', statuses: ['unverified'], kinds: ['primary'], confidence: [], tag: '' }
 })
@@ -107,6 +107,10 @@ function Composer({ initial, pool, onDone }) {
           <div><label>Preheader <span className="small">(preview text in the inbox list, optional)</span></label><input value={b.preheader} onChange={set('preheader')} /></div>
           <div><label>Body *</label><textarea style={{ minHeight: 320, fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: '0.9rem' }} value={b.body} onChange={set('body')} /></div>
           <div className="small">Blank line = new paragraph · <code>**bold**</code> · <code>[label](https://…)</code> · lines starting <code>- </code> make a list · merge fields <code>{'{{first_name|there}}'}</code> <code>{'{{name}}'}</code> <code>{'{{email}}'}</code> <code>{'{{confirm_url}}'}</code>. A "Yes, keep me on the list" button, the unsubscribe link and the "why you're receiving this" footer are added automatically (put <code>{'{{confirm_url}}'}</code> in the body yourself to place the confirm link where you want instead).</div>
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1.4fr', gap: 12 }}>
+            <div><label>Button label <span className="small">(optional)</span></label><input value={b.cta_label || ''} onChange={set('cta_label')} placeholder="Donate" /></div>
+            <div><label>Button link</label><input value={b.cta_url || ''} onChange={set('cta_url')} placeholder="https://tug202.org/support" /></div>
+          </div>
           <ImagePicker value={b.image} pool={pool} onChange={image => setB({ ...b, image })} />
           <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div><label>Pace <span className="small">(messages per minute)</span></label><input type="number" min={1} max={600} value={b.rate_per_minute ?? 30} onChange={e => setB({ ...b, rate_per_minute: Number(e.target.value) })} /></div>
@@ -160,7 +164,7 @@ function Detail({ id, onBack, onEdit }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
         <h2 style={{ fontSize: '1.6rem', marginBottom: 0 }}>{b.subject} <span className="pill" style={{ background: STATUS_COLOR[b.status] }}>{b.status}</span></h2>
         <div className="btn-row" style={{ marginTop: 0 }}>
-          {['draft', 'scheduled'].includes(b.status) && <button className="btn btn-outline" onClick={() => onEdit({ id: b.id, subject: b.subject, preheader: b.preheader, body: b.body, image: b.image || '', rate_per_minute: b.rate_per_minute, daily_cap: b.daily_cap, audience: b.audience })}>Edit</button>}
+          {['draft', 'scheduled'].includes(b.status) && <button className="btn btn-outline" onClick={() => onEdit({ id: b.id, subject: b.subject, preheader: b.preheader, body: b.body, image: b.image || '', cta_label: b.cta_label, cta_url: b.cta_url, rate_per_minute: b.rate_per_minute, daily_cap: b.daily_cap, audience: b.audience })}>Edit</button>}
           {b.status === 'draft' && <button className="btn btn-primary" onClick={() => act('send', 'Send this blast to the selected audience now? This cannot be undone.')}>Send now</button>}
           {b.status === 'scheduled' && <button className="btn btn-outline" onClick={() => act('unschedule')}>Cancel schedule</button>}
           {b.status === 'sending' && <button className="btn btn-outline" onClick={() => act('pause')}>Pause</button>}
