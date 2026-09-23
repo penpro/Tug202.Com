@@ -31,15 +31,24 @@ export default function Waiver() {
   }
 
   const set = (k) => (e) => setF(x => ({ ...x, [k]: e.target.value }))
+  const setMinor = (i, patch) => setF(x => ({ ...x, minor_list: x.minor_list.map((m, j) => (j === i ? { ...m, ...patch } : m)) }))
+  const removeMinor = (i) => setF(x => ({ ...x, minor_list: x.minor_list.filter((_, j) => j !== i) }))
+
   const submit = async (e) => {
     e.preventDefault()
     if (!f.agree) return setState({ status: 'err', message: 'Please tick the box to accept the agreement.' })
+    if (f.guardian && !f.minor_list.some(m => m.name.trim())) {
+      return setState({ status: 'err', message: 'Please name each person under 18 you are signing for.' })
+    }
     if (!sig && !f.signed_name.trim()) return setState({ status: 'err', message: 'Please sign, or type your name under the signature.' })
     setState({ status: 'sending', message: '' })
     try {
       const res = await fetch('/api/waiver', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...f, signature: sig, kiosk, sailing_id: sailingId || undefined })
+        body: JSON.stringify({
+          ...f, signature: sig, kiosk, sailing_id: sailingId || undefined,
+          minor_list: f.guardian ? f.minor_list.filter(m => m.name.trim()) : []
+        })
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Something went wrong')
@@ -102,12 +111,28 @@ export default function Waiver() {
           <div><label htmlFor="w-ep">Their phone</label><input id="w-ep" value={f.emergency_phone} onChange={set('emergency_phone')} /></div>
         </div>
 
-        <label className="check"><input type="checkbox" checked={f.guardian} onChange={e => setF(x => ({ ...x, guardian: e.target.checked }))} />
+        <label className="check"><input type="checkbox" checked={f.guardian}
+          onChange={e => setF(x => ({ ...x, guardian: e.target.checked, minor_list: e.target.checked && !x.minor_list.length ? [{ name: '', age: '' }] : x.minor_list }))} />
           <span><strong>I&rsquo;m bringing someone under 18</strong> and I am their parent or legal guardian</span></label>
         {f.guardian && (
-          <div><label htmlFor="w-minors">Their names and ages</label>
-            <input id="w-minors" value={f.minors} onChange={set('minors')} placeholder="e.g. Sam Weaver 12, Alex Weaver 9" />
-            <span className="small">Each of them must stay with you the whole time aboard.</span></div>
+          <div>
+            <label>Each person under 18 you are signing for *</label>
+            <span className="small" style={{ display: 'block', marginBottom: 6 }}>
+              Every child is named on the ship&rsquo;s manifest and counted separately in the head count,
+              so the master can account for everyone aboard. Each of them must stay with you at all times.
+            </span>
+            {f.minor_list.map((m, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <input aria-label={`Child ${i + 1} name`} placeholder="Full name" value={m.name}
+                  onChange={e => setMinor(i, { name: e.target.value })} style={{ flex: '1 1 auto' }} />
+                <input aria-label={`Child ${i + 1} age`} placeholder="Age" inputMode="numeric" value={m.age}
+                  onChange={e => setMinor(i, { age: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })} style={{ width: 72 }} />
+                {f.minor_list.length > 1 && <button type="button" className="linkbtn" onClick={() => removeMinor(i)}>remove</button>}
+              </div>
+            ))}
+            <button type="button" className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+              onClick={() => setF(x => ({ ...x, minor_list: [...x.minor_list, { name: '', age: '' }] }))}>+ Add another</button>
+          </div>
         )}
 
         <label className="check"><input type="checkbox" checked={!f.photo_ok} onChange={e => setF(x => ({ ...x, photo_ok: !e.target.checked }))} />
@@ -151,7 +176,7 @@ export default function Waiver() {
 
 const blank = () => ({
   name: '', email: '', phone: '', city: '', address: '', dob: '',
-  emergency_name: '', emergency_phone: '', minors: '', signed_name: '',
+  emergency_name: '', emergency_phone: '', minors: '', minor_list: [], signed_name: '',
   guardian: false, photo_ok: true, optin: false, agree: false, website: ''
 })
 

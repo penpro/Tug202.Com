@@ -36,8 +36,10 @@ export default function Sailings() {
                 <div className="small">{day(s.sail_date)}{s.location && ` · ${s.location}`}</div>
               </div>
               <div className="small">
-                <strong style={{ fontSize: '1.3rem', color: s.aboard > 0 ? 'var(--navy-800)' : undefined }}>{s.aboard}</strong> aboard
-                {s.capacity > 0 && <> / {s.capacity}</>}<br />{s.registered} on the list
+                <strong style={{ fontSize: '1.3rem', color: s.aboard > 0 ? 'var(--navy-800)' : undefined }}>{s.aboard}</strong> souls
+                {s.capacity > 0 && <> / {s.capacity}</>}
+                {s.children > 0 && <> · {s.children} children</>}
+                <br />{s.registered} on the list
               </div>
               <div className="small">&rarr;</div>
             </div>
@@ -75,6 +77,7 @@ function NewSailing({ onDone }) {
 function Sailing({ id, onBack }) {
   const [d, setD] = useState(null); const [err, setErr] = useState(''); const [scanning, setScanning] = useState(false)
   const [flash, setFlash] = useState(null); const [manual, setManual] = useState('')
+  const [walkup, setWalkup] = useState({ role: 'guest', adults: 1, minor_count: 0 })
   const timer = useRef(null)
 
   const load = async () => { try { setD(await api(`/admin/sailings/${id}`)) } catch (e) { setErr(e.message) } }
@@ -89,7 +92,7 @@ function Sailing({ id, onBack }) {
     } catch (e) { setFlash({ ok: false, error: e.message }); return false }
   }
   const out = async (cid) => { await api(`/admin/checkins/${cid}/out`, { method: 'POST' }); load() }
-  const setParty = async (cid, n) => { await api(`/admin/checkins/${cid}/party`, { method: 'POST', body: { party_size: n } }); load() }
+  const setParty = async (cid, patch) => { await api(`/admin/checkins/${cid}/party`, { method: 'POST', body: patch }); load() }
   const allAshore = async () => {
     if (!confirm('Mark everyone ashore and close this sailing?')) return
     await api(`/admin/sailings/${id}/all-ashore`, { method: 'POST' }); load()
@@ -117,13 +120,16 @@ function Sailing({ id, onBack }) {
       </div>
       <p className="small">{day(s.sail_date)}{s.location && ` · ${s.location}`}{s.notes && ` · ${s.notes}`}</p>
 
-      {/* The number the master actually needs. */}
-      <div className="stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <div className="stat"><div className="stat-n" style={{ color: s.capacity > 0 && counts.aboard > s.capacity ? 'var(--stripe)' : 'var(--navy-800)', fontSize: '2.6rem' }}>{counts.aboard}</div>
+      {/* The manifest answer, in the order a boarding officer asks for it. */}
+      <div className="stats" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        <div className="stat"><div className="stat-n">{counts.passengers}</div><div className="stat-l">passengers</div><div className="small">adults, 18+</div></div>
+        <div className="stat"><div className="stat-n">{counts.crew}</div><div className="stat-l">crew</div><div className="small">incl. volunteers</div></div>
+        <div className="stat"><div className="stat-n">{counts.children}</div><div className="stat-l">children</div><div className="small">under 18</div></div>
+        <div className="stat" style={{ background: '#fff6f3', borderColor: 'var(--stripe)' }}>
+          <div className="stat-n" style={{ color: s.capacity > 0 && counts.aboard > s.capacity ? 'var(--stripe)' : 'var(--navy-800)', fontSize: '2.6rem' }}>{counts.aboard}</div>
           <div className="stat-l">souls on board</div><div className="small">{s.capacity > 0 ? `capacity ${s.capacity}` : 'no stated limit'}</div></div>
-        <div className="stat"><div className="stat-n">{counts.expected}</div><div className="stat-l">on the list</div><div className="small">pre-registered + walk-ups</div></div>
-        <div className="stat"><div className="stat-n">{counts.ashore}</div><div className="stat-l">not aboard</div><div className="small">expected or gone ashore</div></div>
       </div>
+      <p className="small">{counts.expected} on the list · {counts.ashore} not aboard (expected or gone ashore)</p>
       {s.capacity > 0 && counts.aboard > s.capacity && <div className="form-msg err"><strong>Over capacity.</strong> {counts.aboard} aboard against a limit of {s.capacity}.</div>}
 
       <div className="btn-row">
@@ -131,20 +137,29 @@ function Sailing({ id, onBack }) {
           {scanning ? 'Stop scanning' : '📷 Scan boarding passes'}
         </button>
         <a className="btn btn-outline" href={`/waiver?kiosk=1&sailing=${id}`} target="_blank" rel="noreferrer">Open tablet sign-in</a>
+        <a className="btn btn-outline" href={`/api/admin/sailings/${id}/manifest`} target="_blank" rel="noreferrer">📋 Manifest PDF</a>
       </div>
 
       {scanning && <Scanner onCode={(code) => checkIn({ code })} onError={(m) => setFlash({ ok: false, error: m })} />}
       {flash && <Flash flash={flash} onClose={() => setFlash(null)} />}
 
       <div className="form" style={{ maxWidth: 'none', marginTop: 10 }}>
-        <label>Check someone in by code or by name</label>
+        <label>Check someone in by code or by name <span className="small">— role, then adults and children for a walk-up</span></label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input value={manual} onChange={e => setManual(e.target.value)} placeholder="Pass code, or a name for a walk-up"
-            style={{ flex: '1 1 200px' }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('ci-go')?.click() } }} />
+            style={{ flex: '1 1 180px' }} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('ci-go')?.click() } }} />
+          <select value={walkup.role} onChange={e => setWalkup(w => ({ ...w, role: e.target.value }))} style={{ width: 110 }} aria-label="Role">
+            <option value="guest">passenger</option><option value="crew">crew</option><option value="volunteer">volunteer</option>
+          </select>
+          <input type="number" min={1} max={20} value={walkup.adults} onChange={e => setWalkup(w => ({ ...w, adults: e.target.value }))}
+            style={{ width: 66 }} aria-label="Adults" title="Adults" />
+          <input type="number" min={0} max={20} value={walkup.minor_count} onChange={e => setWalkup(w => ({ ...w, minor_count: e.target.value }))}
+            style={{ width: 66 }} aria-label="Children" title="Children under 18" />
           <button id="ci-go" className="btn btn-primary" onClick={async () => {
             const v = manual.trim(); if (!v) return
             const isCode = /^[A-Za-z0-9]{8}$/.test(v)
-            if (await checkIn(isCode ? { code: v } : { name: v })) setManual('')
+            const body = isCode ? { code: v, role: walkup.role } : { name: v, ...walkup }
+            if (await checkIn(body)) { setManual(''); setWalkup({ role: 'guest', adults: 1, minor_count: 0 }) }
           }}>Check in</button>
         </div>
       </div>
@@ -154,15 +169,31 @@ function Sailing({ id, onBack }) {
       <table className="spec" style={{ fontSize: '0.92rem' }}><tbody>
         {aboard.map(r => (
           <tr key={r.id}>
-            <th style={{ fontWeight: 400, width: '40%' }}>{r.name}{r.minors && <div className="small">with {r.minors}</div>}</th>
+            <th style={{ fontWeight: 400, width: '34%' }}>
+              {r.name}
+              <select value={r.role} onChange={e => setParty(r.id, { role: e.target.value })}
+                style={{ marginLeft: 8, padding: '1px 4px', fontSize: '0.78rem' }} aria-label={`Role for ${r.name}`}>
+                <option value="guest">passenger</option><option value="crew">crew</option><option value="volunteer">volunteer</option>
+              </select>
+              {r.minor_names?.length > 0 && <div className="small">with {r.minor_names.map(m => `${m.name}${m.age != null ? ` (${m.age})` : ''}`).join(', ')}</div>}
+            </th>
             <td className="small">
               in {clock(r.checked_in_at)} · {r.pass_code ? <code>{r.pass_code}</code> : <span style={{ color: 'var(--stripe)' }}>no waiver</span>}
               {r.emergency_phone && <div>ICE: {r.emergency_name} {r.emergency_phone}</div>}
             </td>
             <td className="small" style={{ whiteSpace: 'nowrap' }}>
-              <button className="linkbtn" onClick={() => setParty(r.id, Math.max(1, r.party_size - 1))}>−</button>
-              <strong style={{ margin: '0 6px' }}>{r.party_size}</strong>
-              <button className="linkbtn" onClick={() => setParty(r.id, r.party_size + 1)}>+</button>
+              <span title="Adults">
+                <button className="linkbtn" onClick={() => setParty(r.id, { adults: Math.max(0, r.adults - 1) })}>−</button>
+                <strong style={{ margin: '0 5px' }}>{r.adults}</strong>
+                <button className="linkbtn" onClick={() => setParty(r.id, { adults: r.adults + 1 })}>+</button>
+                <span style={{ color: 'var(--ink-3)' }}> ad</span>
+              </span>
+              <span title="Children under 18" style={{ marginLeft: 10 }}>
+                <button className="linkbtn" onClick={() => setParty(r.id, { minor_count: Math.max(0, r.minor_count - 1) })}>−</button>
+                <strong style={{ margin: '0 5px' }}>{r.minor_count}</strong>
+                <button className="linkbtn" onClick={() => setParty(r.id, { minor_count: r.minor_count + 1 })}>+</button>
+                <span style={{ color: 'var(--ink-3)' }}> ch</span>
+              </span>
               <button className="linkbtn" style={{ marginLeft: 12 }} onClick={() => out(r.id)}>Ashore</button>
             </td>
           </tr>
@@ -192,7 +223,7 @@ function Flash({ flash, onClose }) {
       <span>
         {bad ? flash.error : <>
           <strong>{flash.name}</strong>{flash.already ? ' is already aboard' : ' checked in'}
-          {flash.party_size > 1 && ` — party of ${flash.party_size}`}
+          {(flash.adults > 1 || flash.minor_count > 0) && ` — ${flash.adults} adult${flash.adults === 1 ? '' : 's'}${flash.minor_count ? `, ${flash.minor_count} child${flash.minor_count === 1 ? '' : 'ren'}` : ''}`}
           {flash.minors && <> (with {flash.minors})</>}
           {flash.expired && <div style={{ color: '#b8321f' }}><strong>Waiver expired — get a new one signed.</strong></div>}
           {flash.warning && <div style={{ color: '#a2823a' }}>{flash.warning}</div>}

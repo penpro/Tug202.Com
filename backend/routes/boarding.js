@@ -20,6 +20,7 @@ const { str, email } = require('../validate');
 const { deliverRaw, notify } = require('../mailer');
 const { upsertContact } = require('../crm');
 const { page, esc } = require('../public-page');
+const { manifestPdf } = require('../manifest-pdf');
 const W = require('../waiver-text');
 
 const pub = express.Router();
@@ -63,7 +64,7 @@ pub.post('/waiver', async (req, res, next) => {
       dob: date(b.dob),
       emergency_name: str(b.emergency_name, 160),
       emergency_phone: str(b.emergency_phone, 40),
-      minors: str(b.minors, 600),
+      minors: str(b.minors, 600),          // kept as a readable summary
       signed_name,
       signature: str(b.signature, 200000) || null,
       waiver_version: W.VERSION,
@@ -78,9 +79,23 @@ pub.post('/waiver', async (req, res, next) => {
       expires_on: seasonEnd()
     };
 
+    // Minors arrive as [{name, age}]; the old free-text field is still filled
+    // in as a human-readable summary so nothing that reads it breaks.
+    const minorList = (Array.isArray(b.minor_list) ? b.minor_list : [])
+      .map(m => ({ name: str(m?.name, 160), age: m?.age === '' || m?.age === null || m?.age === undefined ? null : Math.max(0, Math.min(17, Number(m.age) || 0)) }))
+      .filter(m => m.name)
+      .slice(0, 20);
+    if (minorList.length) f.minors = minorList.map(m => `${m.name}${m.age != null ? ' ' + m.age : ''}`).join(', ');
+    if (f.guardian && !minorList.length && !f.minors) {
+      return res.status(400).json({ error: 'Please name each person under 18 you are signing for.' });
+    }
+
     const cols = Object.keys(f);
     const [ins] = await pool.execute(
       `INSERT INTO waivers (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, cols.map(k => f[k]));
+    for (const m of minorList) {
+      await pool.execute('INSERT INTO waiver_minors (waiver_id, name, age) VALUES (?, ?, ?)', [ins.insertId, m.name, m.age]);
+    }
 
     // CRM: the person, and "waiver on file" against their record.
     let contactId = null;
@@ -99,12 +114,13 @@ pub.post('/waiver', async (req, res, next) => {
 
     // Pre-registering for a specific day puts them on that roster straight away.
     const sailingId = Number(b.sailing_id) || null;
-    const party = Math.max(1, Math.min(20, Number(b.party_size) || (f.minors ? f.minors.split(',').filter(Boolean).length + 1 : 1)));
+    const adults = Math.max(1, Math.min(20, Number(b.adults) || 1));
+    const minorCount = minorList.length;
     if (sailingId) {
       await pool.execute(
-        `INSERT IGNORE INTO sailing_checkins (sailing_id, waiver_id, name, email, party_size, registered_at, method${kiosk ? ', checked_in_at' : ''})
-         VALUES (?, ?, ?, ?, ?, NOW(), ?${kiosk ? ', NOW()' : ''})`,
-        [sailingId, ins.insertId, name, f.email, party, kiosk ? 'kiosk' : 'prereg']);
+        `INSERT IGNORE INTO sailing_checkins (sailing_id, waiver_id, name, email, adults, minor_count, party_size, registered_at, method${kiosk ? ', checked_in_at' : ''})
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?${kiosk ? ', NOW()' : ''})`,
+        [sailingId, ins.insertId, name, f.email, adults, minorCount, adults + minorCount, kiosk ? 'kiosk' : 'prereg']);
     }
 
     if (f.email && !kiosk) {
@@ -187,11 +203,30 @@ pub.get('/pass/:code', async (req, res, next) => {
 // ---- admin: sailings -------------------------------------------------------
 const ABOARD = 'checked_in_at IS NOT NULL AND checked_out_at IS NULL';
 
+// The manifest, the way a boarding officer asks for it: passengers, crew,
+// children — and the total souls that has to match a life-jacket count.
+// Volunteers working the ship count as crew; a child of a crew member is still
+// counted as a child.
+function tally(roster) {
+  const on = roster.filter(r => r.checked_in_at && !r.checked_out_at);
+  const isCrew = (r) => r.role === 'crew' || r.role === 'volunteer';
+  const t = {
+    passengers: on.filter(r => !isCrew(r)).reduce((a, r) => a + r.adults, 0),
+    crew: on.filter(isCrew).reduce((a, r) => a + r.adults, 0),
+    children: on.reduce((a, r) => a + r.minor_count, 0)
+  };
+  t.aboard = t.passengers + t.crew + t.children;
+  t.expected = roster.reduce((a, r) => a + r.adults + r.minor_count, 0);
+  t.ashore = t.expected - t.aboard;
+  return t;
+}
+
 admin.get('/sailings', async (req, res, next) => {
   try {
     const [rows] = await pool.query(`SELECT s.*,
         (SELECT COUNT(*) FROM sailing_checkins c WHERE c.sailing_id = s.id) AS registered,
-        (SELECT COALESCE(SUM(party_size), 0) FROM sailing_checkins c WHERE c.sailing_id = s.id AND ${ABOARD}) AS aboard
+        (SELECT COALESCE(SUM(adults + minor_count), 0) FROM sailing_checkins c WHERE c.sailing_id = s.id AND ${ABOARD}) AS aboard,
+        (SELECT COALESCE(SUM(minor_count), 0) FROM sailing_checkins c WHERE c.sailing_id = s.id AND ${ABOARD}) AS children
       FROM sailings s ORDER BY s.sail_date DESC, s.id DESC LIMIT 200`);
     res.json({ rows });
   } catch (err) { next(err); }
@@ -228,15 +263,26 @@ admin.get('/sailings/:id', async (req, res, next) => {
     const id = Number(req.params.id);
     const [[s]] = await pool.query('SELECT * FROM sailings WHERE id = ?', [id]);
     if (!s) return res.status(404).json({ error: 'Not found' });
-    const [roster] = await pool.query(
-      `SELECT c.*, w.pass_code, w.phone, w.minors, w.emergency_name, w.emergency_phone, w.expires_on
-       FROM sailing_checkins c LEFT JOIN waivers w ON w.id = c.waiver_id
-       WHERE c.sailing_id = ? ORDER BY (c.checked_in_at IS NOT NULL AND c.checked_out_at IS NULL) DESC, c.name`, [id]);
-    const aboard = roster.filter(r => r.checked_in_at && !r.checked_out_at).reduce((a, r) => a + r.party_size, 0);
-    const expected = roster.reduce((a, r) => a + r.party_size, 0);
-    res.json({ sailing: s, roster, counts: { aboard, expected, ashore: expected - aboard } });
+    const roster = await loadRoster(id);
+    res.json({ sailing: s, roster, counts: tally(roster) });
   } catch (err) { next(err); }
 });
+
+async function loadRoster(id) {
+  const [roster] = await pool.query(
+    `SELECT c.*, w.pass_code, w.phone, w.minors, w.emergency_name, w.emergency_phone, w.expires_on
+     FROM sailing_checkins c LEFT JOIN waivers w ON w.id = c.waiver_id
+     WHERE c.sailing_id = ? ORDER BY (c.checked_in_at IS NOT NULL AND c.checked_out_at IS NULL) DESC, c.name`, [id]);
+  // Named children, so the manifest can list them rather than just count them.
+  const ids = roster.map(r => r.waiver_id).filter(Boolean);
+  if (ids.length) {
+    const [kids] = await pool.query(`SELECT waiver_id, name, age FROM waiver_minors WHERE waiver_id IN (${ids.map(() => '?').join(',')})`, ids);
+    for (const r of roster) r.minor_names = kids.filter(k => k.waiver_id === r.waiver_id);
+  } else {
+    for (const r of roster) r.minor_names = [];
+  }
+  return roster;
+}
 
 // Check someone aboard: by scanned pass code, by roster row, or by name.
 admin.post('/sailings/:id/checkin', async (req, res, next) => {
@@ -248,7 +294,8 @@ admin.post('/sailings/:id/checkin', async (req, res, next) => {
     // A scanner may hand us the whole pass URL.
     const raw = str(b.code, 200).toUpperCase();
     const code = (raw.match(/([A-Z0-9]{8})\s*$/) || [])[1] || '';
-    const party = Math.max(1, Math.min(20, Number(b.party_size) || 1));
+    const adults = Math.max(1, Math.min(20, Number(b.adults) || 1));
+    const role = ['guest', 'crew', 'volunteer'].includes(b.role) ? b.role : 'guest';
 
     let waiver = null;
     if (code) {
@@ -260,30 +307,32 @@ admin.post('/sailings/:id/checkin', async (req, res, next) => {
       const [[row]] = await pool.query('SELECT * FROM sailing_checkins WHERE id = ? AND sailing_id = ?', [Number(b.checkin_id), id]);
       if (!row) return res.status(404).json({ error: 'Not on this roster' });
       await pool.execute("UPDATE sailing_checkins SET checked_in_at = NOW(), checked_out_at = NULL, method = 'manual', by_user = ? WHERE id = ?", [req.user.id || null, row.id]);
-      return res.json({ ok: true, name: row.name, aboard: true });
+      return res.json({ ok: true, name: row.name, aboard: true, adults: row.adults, minor_count: row.minor_count });
     } else if (str(b.name, 160)) {
+      const kids = Math.max(0, Math.min(20, Number(b.minor_count) || 0));
       const [r] = await pool.execute(
-        "INSERT INTO sailing_checkins (sailing_id, name, email, party_size, role, checked_in_at, method, by_user, note) VALUES (?, ?, ?, ?, ?, NOW(), 'manual', ?, ?)",
-        [id, str(b.name, 160), email(b.email) || '', party, ['guest', 'crew', 'volunteer'].includes(b.role) ? b.role : 'guest', req.user.id || null, str(b.note, 300)]);
-      return res.json({ ok: true, name: str(b.name, 160), aboard: true, id: r.insertId, warning: 'No waiver on file for this person — get one signed.' });
+        "INSERT INTO sailing_checkins (sailing_id, name, email, adults, minor_count, party_size, role, checked_in_at, method, by_user, note) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 'manual', ?, ?)",
+        [id, str(b.name, 160), email(b.email) || '', adults, kids, adults + kids, role, req.user.id || null, str(b.note, 300)]);
+      return res.json({ ok: true, name: str(b.name, 160), aboard: true, id: r.insertId, adults, minor_count: kids,
+        warning: 'No waiver on file for this person — get one signed.' });
     } else {
       return res.status(400).json({ error: 'Scan a pass, or give a name.' });
     }
 
     const expired = waiver.expires_on && new Date(waiver.expires_on) < new Date(new Date().toDateString());
     const [[existing]] = await pool.query('SELECT * FROM sailing_checkins WHERE sailing_id = ? AND waiver_id = ?', [id, waiver.id]);
+    const [[{ kids }]] = await pool.query('SELECT COUNT(*) AS kids FROM waiver_minors WHERE waiver_id = ?', [waiver.id]);
     if (existing) {
       if (existing.checked_in_at && !existing.checked_out_at) {
-        return res.json({ ok: true, already: true, name: waiver.name, aboard: true, party_size: existing.party_size, expired, since: existing.checked_in_at });
+        return res.json({ ok: true, already: true, name: waiver.name, aboard: true, adults: existing.adults, minor_count: existing.minor_count, expired, since: existing.checked_in_at });
       }
       await pool.execute("UPDATE sailing_checkins SET checked_in_at = NOW(), checked_out_at = NULL, method = 'qr', by_user = ? WHERE id = ?", [req.user.id || null, existing.id]);
-      return res.json({ ok: true, name: waiver.name, aboard: true, party_size: existing.party_size, expired, minors: waiver.minors });
+      return res.json({ ok: true, name: waiver.name, aboard: true, adults: existing.adults, minor_count: existing.minor_count, expired, minors: waiver.minors });
     }
-    const size = Math.max(party, waiver.minors ? waiver.minors.split(',').filter(Boolean).length + 1 : 1);
     await pool.execute(
-      "INSERT INTO sailing_checkins (sailing_id, waiver_id, name, email, party_size, checked_in_at, method, by_user) VALUES (?, ?, ?, ?, ?, NOW(), 'qr', ?)",
-      [id, waiver.id, waiver.name, waiver.email, size, req.user.id || null]);
-    res.json({ ok: true, name: waiver.name, aboard: true, party_size: size, expired, minors: waiver.minors });
+      "INSERT INTO sailing_checkins (sailing_id, waiver_id, name, email, adults, minor_count, party_size, role, checked_in_at, method, by_user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'qr', ?)",
+      [id, waiver.id, waiver.name, waiver.email, adults, kids, adults + kids, role, req.user.id || null]);
+    res.json({ ok: true, name: waiver.name, aboard: true, adults, minor_count: kids, expired, minors: waiver.minors });
   } catch (err) { next(err); }
 });
 
@@ -294,11 +343,31 @@ admin.post('/checkins/:id/out', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Adjust a row at the brow: how many adults, how many children, guest or crew.
 admin.post('/checkins/:id/party', async (req, res, next) => {
   try {
-    await pool.execute('UPDATE sailing_checkins SET party_size = ? WHERE id = ?',
-      [Math.max(1, Math.min(20, Number(req.body?.party_size) || 1)), Number(req.params.id)]);
+    const b = req.body || {}; const sets = []; const args = [];
+    if ('adults' in b) { sets.push('adults = ?'); args.push(Math.max(0, Math.min(40, Number(b.adults) || 0))); }
+    if ('minor_count' in b) { sets.push('minor_count = ?'); args.push(Math.max(0, Math.min(40, Number(b.minor_count) || 0))); }
+    if (['guest', 'crew', 'volunteer'].includes(b.role)) { sets.push('role = ?'); args.push(b.role); }
+    if (!sets.length) return res.status(400).json({ error: 'nothing to update' });
+    sets.push('party_size = adults + minor_count');
+    await pool.execute(`UPDATE sailing_checkins SET ${sets.join(', ')} WHERE id = ?`, [...args, Number(req.params.id)]);
     res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// The manifest as a PDF — what you hand a boarding officer.
+admin.get('/sailings/:id/manifest', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const [[s]] = await pool.query('SELECT * FROM sailings WHERE id = ?', [id]);
+    if (!s) return res.status(404).send('Not found');
+    const roster = await loadRoster(id);
+    const pdf = await manifestPdf(s, roster, tally(roster), req.user.name || '');
+    res.type('application/pdf')
+      .setHeader('Content-Disposition', `inline; filename="comanche-manifest-${s.sail_date}.pdf"`);
+    res.send(pdf);
   } catch (err) { next(err); }
 });
 
