@@ -12,6 +12,7 @@ const formsRouter = require('./routes/forms');
 const newsRouter = require('./routes/news');
 const adminRouter = require('./routes/admin');
 const { router: selfServeRouter } = require('./routes/selfserve');
+const { pub: receiptsPublic } = require('./routes/receipts');
 const { pub: blastsPublic } = require('./routes/blasts');
 
 const app = express();
@@ -58,7 +59,7 @@ const formLimiter = rateLimit({
   limit: 10,
   // Count only the four public POST forms; everything else on /api (admin,
   // news, unsubscribe) passes through this mount untouched.
-  skip: (req) => !!req.session?.user || req.method !== 'POST' || !/^\/(contact|volunteer|partner|newsletter)$/.test(req.path),
+  skip: (req) => !!req.session?.user || req.method !== 'POST' || !/^\/(contact|volunteer|partner|newsletter|receipt-request)$/.test(req.path),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many submissions from this address. Please try again later or email us directly.' }
@@ -76,6 +77,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api', selfServeRouter);   // /manage — signed links from emails, no session
 app.use('/api/auth', authRouter);
 app.use('/api', formLimiter, formsRouter);
+app.use('/api', formLimiter, receiptsPublic);
 app.use('/api', newsRouter);
 app.use('/api/admin', adminRouter);
 

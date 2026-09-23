@@ -9,6 +9,7 @@ import Partner from './pages/Partner.jsx'
 import News from './pages/News.jsx'
 import { GrantsIndex, GrantDetail } from './pages/Grants.jsx'
 import Support from './pages/Support.jsx'
+import Receipt from './pages/Receipt.jsx'
 import Contact from './pages/Contact.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Portal from './admin/Portal.jsx'
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="grants/:slug" element={<GrantDetail />} />
         <Route path="support" element={<Support />} />
         <Route path="donate" element={<Support />} />
+        <Route path="receipt" element={<Receipt />} />
         <Route path="contact" element={<Contact />} />
         <Route path="admin/*" element={<Portal />} />
         <Route path="*" element={<NotFound />} />

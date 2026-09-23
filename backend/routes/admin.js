@@ -6,6 +6,7 @@ const newsAdminRouter = require('./newsAdmin');
 const { admin: blastsAdmin } = require('./blasts');
 const peopleRouter = require('./people');
 const dmarcRouter = require('./dmarc');
+const { admin: receiptsAdmin } = require('./receipts');
 
 // Everything under /api/admin needs a signed-in portal user (see auth.js).
 // The static ADMIN_TOKEN bearer still works for curl scripts.
@@ -19,6 +20,7 @@ router.use(blastsAdmin);
 router.use(contactsRouter);
 router.use(peopleRouter);
 router.use(dmarcRouter);
+router.use(receiptsAdmin);
 
 router.get('/contacts', async (req, res, next) => {
   try {
@@ -60,20 +62,22 @@ router.get('/subscribers', async (req, res, next) => {
 router.get('/summary', async (req, res, next) => {
   try {
     const q = async (sql) => (await pool.query(sql))[0];
-    const [[c], [v], [p], [s], [n], [ct]] = await Promise.all([
+    const [[c], [v], [p], [s], [n], [ct], [rc]] = await Promise.all([
       q('SELECT COUNT(*) AS n, SUM(handled_at IS NULL) AS open FROM contact_messages'),
       q('SELECT COUNT(*) AS n, SUM(contacted_at IS NULL) AS open FROM volunteer_signups'),
       q('SELECT COUNT(*) AS n, SUM(handled_at IS NULL) AS open FROM partner_inquiries'),
       q('SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE unsubscribed_at IS NULL'),
       q('SELECT COUNT(*) AS n FROM news_posts WHERE is_published = 1'),
-      q('SELECT COUNT(*) AS n FROM contacts')
+      q('SELECT COUNT(*) AS n FROM contacts'),
+      q("SELECT COUNT(*) AS n, SUM(status = 'new') AS open FROM receipt_requests")
     ]);
     const recent = await q(`(SELECT 'contact' AS kind, id, created_at, name AS who, topic AS what FROM contact_messages)
       UNION ALL (SELECT 'volunteer', id, created_at, name, interests FROM volunteer_signups)
       UNION ALL (SELECT 'partner', id, created_at, org_name, LEFT(purpose, 80) FROM partner_inquiries)
       UNION ALL (SELECT 'subscriber', id, created_at, COALESCE(NULLIF(name,''), email), '' FROM newsletter_subscribers)
+      UNION ALL (SELECT 'receipt', id, created_at, donor_name, CONCAT('receipt request'))
       ORDER BY created_at DESC LIMIT 15`);
-    res.json({ contacts: c, volunteers: v, partners: p, subscribers: s, news: n, crm: ct, recent });
+    res.json({ contacts: c, volunteers: v, partners: p, subscribers: s, news: n, crm: ct, receipts: rc, recent });
   } catch (err) { next(err); }
 });
 

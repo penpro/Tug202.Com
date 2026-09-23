@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, apiUpload, fmtDate } from './api.js'
 
-const KIND = { contact: 'Contact message', volunteer: 'Volunteer signup', partner: 'Partner inquiry', subscriber: 'Newsletter signup' }
+const KIND = { contact: 'Contact message', volunteer: 'Volunteer signup', partner: 'Partner inquiry', subscriber: 'Newsletter signup', receipt: 'Receipt request' }
 
 // --- Email authentication (DMARC) -------------------------------------------
 // Mailbox providers send one aggregate report a day to the rua= address in our
@@ -92,7 +92,8 @@ export default function Dashboard() {
     { n: d.partners.open ?? 0, l: 'partner inquiries open', sub: `${d.partners.n} total`, to: '/admin/inbox?tab=partners' },
     { n: d.subscribers.n, l: 'newsletter subscribers', sub: 'active', to: '/admin/inbox?tab=subscribers' },
     { n: d.crm.n, l: 'contacts in CRM', sub: 'people', to: '/admin/contacts' },
-    { n: d.news.n, l: 'news posts live', sub: 'published', to: '/admin/news' }
+    { n: d.news.n, l: 'news posts live', sub: 'published', to: '/admin/news' },
+    { n: d.receipts?.open ?? 0, l: 'receipts to issue', sub: `${d.receipts?.n ?? 0} requested`, to: '/admin/receipts' }
   ]
   return (
     <div>
@@ -100,7 +101,7 @@ export default function Dashboard() {
       <div className="stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         {tiles.map(t => (
           <Link key={t.l} to={t.to} className="stat" style={{ textDecoration: 'none' }}>
-            <div className="stat-n" style={{ color: t.n && /unanswered|to contact|open/.test(t.l) ? 'var(--stripe)' : undefined }}>{t.n}</div>
+            <div className="stat-n" style={{ color: t.n && /unanswered|to contact|open|to issue/.test(t.l) ? 'var(--stripe)' : undefined }}>{t.n}</div>
             <div className="stat-l">{t.l}</div><div className="small">{t.sub}</div>
           </Link>
         ))}

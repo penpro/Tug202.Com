@@ -84,7 +84,7 @@ export default function Support() {
           <div className="notice notice-brass" style={{ marginTop: 36 }}>
             <p>
               <strong>{org.name}</strong> is a {org.taxStatus} (EIN {org.ein}). Contributions are
-              tax-deductible to the extent allowed by law; you will receive a written receipt. Donations
+              tax-deductible to the extent allowed by law; you will receive a written receipt — or <Link to="/receipt">request one here</Link>. Donations
               are always voluntary and are never a condition of coming aboard or of any vessel service.
             </p>
           </div>
@@ -148,7 +148,7 @@ export default function Support() {
           <p className="small" style={{ marginTop: 18 }}>
             Also: <a href="/donate/tug-comanche-donate-qr.svg" download>QR code as SVG</a> (scales to any size) &middot;
             the code links to <a href={donate.onlineUrl} target="_blank" rel="noreferrer">{donate.onlineUrl?.replace('https://', '')}</a>.
-            Also for the board: the <a href="/documents/tug-comanche-donation-receipt.pdf">donation receipt form</a> (B&amp;W printable). Foundations and sponsors: see our <Link to="/grants">funding proposals</Link>.
+            Donors: <Link to="/receipt">request a receipt online</Link>. Also for the board: the <a href="/documents/tug-comanche-donation-receipt.pdf">donation receipt form</a> (B&amp;W printable). Foundations and sponsors: see our <Link to="/grants">funding proposals</Link>.
           </p>
         </div>
       </section>

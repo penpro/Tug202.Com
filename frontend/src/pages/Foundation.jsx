@@ -98,7 +98,7 @@ export default function Foundation() {
               <h3 style={{ marginTop: 24 }}>Public documents</h3>
               <ul className="checklist">
                 <li><a href="/documents/TCHRF-Bylaws-2025-10-23.pdf">Bylaws</a> &mdash; adopted October 23, 2025 (PDF)</li>
-                <li><a href="/documents/tug-comanche-donation-receipt.pdf">Donation receipt form</a> &mdash; printable, black &amp; white (PDF)</li>
+                <li><a href="/documents/tug-comanche-donation-receipt.pdf">Donation receipt form</a> &mdash; printable, black &amp; white (PDF). Donors can also <Link to="/receipt">request a receipt online</Link>.</li>
                 <li><Link to="/grants">Funding proposals</Link> &mdash; grant-ready project asks with budgets</li>
                 <li><Link to="/support#print">Donation print kit</Link> &mdash; flyer, table card and QR code</li>
               </ul>
