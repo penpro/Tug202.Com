@@ -307,6 +307,7 @@ function Scanner({ onCode, onError }) {
       }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
       streamRef.current = stream
+      if (!video.current) { stream.getTracks().forEach(t => t.stop()); throw new Error('The video element went away before the camera started.') }
       video.current.srcObject = stream
       await video.current.play()
       setPhase('live'); tick()
@@ -333,45 +334,53 @@ function Scanner({ onCode, onError }) {
     setPhase('idle')
   }
 
-  if (phase === 'idle' || phase === 'starting') return (
-    <div className="notice" style={{ textAlign: 'center' }}>
-      <p style={{ marginTop: 0 }}>Hold each boarding pass up to the camera &mdash; it checks people in as it reads them.</p>
-      <button className="btn btn-primary" onClick={start} disabled={phase === 'starting'}>
-        {phase === 'starting' ? 'Starting camera…' : '📷 Allow camera & start scanning'}
-      </button>
-      <p className="small" style={{ marginBottom: 0 }}>Your browser will ask permission the first time. You can always type the code instead.</p>
-    </div>
-  )
-
-  if (phase === 'blocked' || phase === 'unavailable') return (
-    <div className="form-msg err">
-      <p style={{ marginTop: 0 }}><strong>Camera unavailable.</strong> {detail}</p>
-      {phase === 'blocked' && (
-        <>
-          <p style={{ marginBottom: 4 }}>To let it back in:</p>
-          <ul style={{ margin: '0 0 8px', paddingLeft: 20 }}>
-            <li><strong>iPhone/iPad (Safari):</strong> tap the <strong>ᴀA</strong> icon in the address bar &rarr; Website Settings &rarr; Camera &rarr; Allow. Then reload.</li>
-            <li><strong>Android (Chrome):</strong> tap the lock icon beside the address &rarr; Permissions &rarr; Camera &rarr; Allow. Then reload.</li>
-            <li><strong>Desktop:</strong> click the camera or lock icon in the address bar and allow tug202.org.</li>
-          </ul>
-        </>
-      )}
-      <p style={{ marginBottom: 0 }}>
-        <button className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={start}>Try again</button>
-        <span className="small" style={{ marginLeft: 10 }}>Or type the 8-character code from the pass below &mdash; it works just as well.</span>
-      </p>
-    </div>
-  )
-
+  // The <video> stays mounted from the first render, whatever the phase.
+  // Rendering it only once the camera was live meant video.current was still
+  // null when getUserMedia resolved — "Cannot set properties of null".
   return (
-    <div style={{ margin: '10px 0', position: 'relative', background: '#000', borderRadius: 8, overflow: 'hidden', maxWidth: 420 }}>
-      <video ref={video} playsInline muted style={{ width: '100%', display: 'block' }} />
-      <canvas ref={canvas} style={{ display: 'none' }} />
-      <div style={{ position: 'absolute', inset: '18% 12%', border: '3px solid rgba(255,255,255,.85)', borderRadius: 10, pointerEvents: 'none' }} />
-      <button className="btn btn-outline" onClick={halt}
-        style={{ position: 'absolute', right: 8, top: 8, padding: '4px 10px', fontSize: '0.78rem', background: 'rgba(0,0,0,.55)', color: '#fff', borderColor: 'rgba(255,255,255,.6)' }}>
-        Stop
-      </button>
-    </div>
+    <>
+      <div style={{
+        display: phase === 'live' ? 'block' : 'none',
+        margin: '10px 0', position: 'relative', background: '#000', borderRadius: 8, overflow: 'hidden', maxWidth: 420
+      }}>
+        <video ref={video} playsInline muted style={{ width: '100%', display: 'block' }} />
+        <canvas ref={canvas} style={{ display: 'none' }} />
+        <div style={{ position: 'absolute', inset: '18% 12%', border: '3px solid rgba(255,255,255,.85)', borderRadius: 10, pointerEvents: 'none' }} />
+        <button className="btn btn-outline" onClick={halt}
+          style={{ position: 'absolute', right: 8, top: 8, padding: '4px 10px', fontSize: '0.78rem', background: 'rgba(0,0,0,.55)', color: '#fff', borderColor: 'rgba(255,255,255,.6)' }}>
+          Stop
+        </button>
+      </div>
+
+      {(phase === 'idle' || phase === 'starting') && (
+        <div className="notice" style={{ textAlign: 'center' }}>
+          <p style={{ marginTop: 0 }}>Hold each boarding pass up to the camera &mdash; it checks people in as it reads them.</p>
+          <button className="btn btn-primary" onClick={start} disabled={phase === 'starting'}>
+            {phase === 'starting' ? 'Starting camera…' : '📷 Allow camera & start scanning'}
+          </button>
+          <p className="small" style={{ marginBottom: 0 }}>Your browser will ask permission the first time. You can always type the code instead.</p>
+        </div>
+      )}
+
+      {(phase === 'blocked' || phase === 'unavailable') && (
+        <div className="form-msg err">
+          <p style={{ marginTop: 0 }}><strong>Camera unavailable.</strong> {detail}</p>
+          {phase === 'blocked' && (
+            <>
+              <p style={{ marginBottom: 4 }}>To let it back in:</p>
+              <ul style={{ margin: '0 0 8px', paddingLeft: 20 }}>
+                <li><strong>iPhone/iPad (Safari):</strong> tap the <strong>ᴀA</strong> icon in the address bar &rarr; Website Settings &rarr; Camera &rarr; Allow. Then reload.</li>
+                <li><strong>Android (Chrome):</strong> tap the lock icon beside the address &rarr; Permissions &rarr; Camera &rarr; Allow. Then reload.</li>
+                <li><strong>Desktop:</strong> click the camera or lock icon in the address bar and allow tug202.org.</li>
+              </ul>
+            </>
+          )}
+          <p style={{ marginBottom: 0 }}>
+            <button className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={start}>Try again</button>
+            <span className="small" style={{ marginLeft: 10 }}>Or type the 8-character code from the pass below &mdash; it works just as well.</span>
+          </p>
+        </div>
+      )}
+    </>
   )
 }
