@@ -12,6 +12,9 @@ let backend = null;
 let warnedSet = false;
 if (process.env.SES_REGION) {
   const { SESv2Client, SendEmailCommand, ListSuppressedDestinationsCommand } = require('@aws-sdk/client-sesv2');
+  // Attachments need a full MIME message; nodemailer builds one without
+  // sending it, and SES takes the raw bytes.
+  const mime = nodemailer.createTransport({ streamTransport: true, buffer: true });
   const ses = new SESv2Client({ region: process.env.SES_REGION });
   backend = {
     name: 'ses',
@@ -39,6 +42,19 @@ if (process.env.SES_REGION) {
         return (await ses.send(new SendEmailCommand(params(false)))).MessageId;
       }
     },
+    // Same, but with attachments: built as raw MIME so SES can carry files.
+    async deliverRaw({ to, subject, text, html, attachments, headers }) {
+      const built = await mime.sendMail({ from: from(), to, subject, text, html, attachments, headers });
+      const params = (withSet) => ({
+        Content: { Raw: { Data: built.message } },
+        ConfigurationSetName: withSet && process.env.SES_CONFIG_SET ? process.env.SES_CONFIG_SET : undefined
+      });
+      try { return (await ses.send(new SendEmailCommand(params(true)))).MessageId; }
+      catch (err) {
+        if (!/configuration set/i.test(err.message)) throw err;
+        return (await ses.send(new SendEmailCommand(params(false)))).MessageId;
+      }
+    },
     // SES's account-level suppression list: every address that hard-bounced or
     // complained, whether or not the SNS webhook saw it. Yields
     // { email, reason: 'BOUNCE'|'COMPLAINT', at: Date }. Needs
@@ -59,7 +75,11 @@ if (process.env.SES_REGION) {
     secure: Number(process.env.SMTP_PORT) === 465,
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
   });
-  backend = { name: 'smtp', deliver: async ({ to, subject, text, html, replyTo, headers }) => (await transport.sendMail({ from: from(), to, subject, text, html, replyTo, headers })).messageId };
+  backend = {
+    name: 'smtp',
+    deliver: async ({ to, subject, text, html, replyTo, headers }) => (await transport.sendMail({ from: from(), to, subject, text, html, replyTo, headers })).messageId,
+    deliverRaw: async (msg) => (await transport.sendMail({ from: from(), ...msg })).messageId
+  };
 }
 
 // Notification to the board (NOTIFY_EMAIL, comma-separated). Never throws.
@@ -88,4 +108,11 @@ async function deliver(msg) {
   return backend.deliver(msg);
 }
 
-module.exports = { notify, send, deliver, suppressed: backend?.suppressed, backendName: backend?.name || 'none' };
+// Delivery with attachments (nodemailer's attachment shape).
+async function deliverRaw(msg) {
+  if (!backend) throw new Error('No mail backend configured');
+  if (!backend.deliverRaw) return backend.deliver(msg);
+  return backend.deliverRaw(msg);
+}
+
+module.exports = { notify, send, deliver, deliverRaw, suppressed: backend?.suppressed, backendName: backend?.name || 'none' };

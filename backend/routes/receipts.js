@@ -13,9 +13,10 @@
 const express = require('express');
 const pool = require('../db');
 const { str, email } = require('../validate');
-const { notify, send, deliver } = require('../mailer');
+const { notify, deliverRaw } = require('../mailer');
 const { upsertContact } = require('../crm');
-const { receiptHtml, receiptText } = require('../receipt');
+const { receiptText, receiptEmailHtml } = require('../receipt');
+const { receiptPdf } = require('../receipt-pdf');
 
 const pub = express.Router();
 const admin = express.Router();
@@ -137,11 +138,13 @@ admin.post('/receipts/:id/issue', async (req, res, next) => {
     let mailed = false;
     if (req.body?.email !== false) {
       try {
-        await deliver({
+        const pdf = await receiptPdf(out);
+        await deliverRaw({
           to: out.email,
           subject: `Your donation receipt (${receipt_no}) — Tug Comanche Historical Rescue Foundation`,
           text: receiptText(out),
-          html: receiptHtml(out, SITE())
+          html: receiptEmailHtml(out, SITE()),
+          attachments: [{ filename: `tug-comanche-receipt-${receipt_no}.pdf`, content: pdf, contentType: 'application/pdf' }]
         });
         mailed = true;
       } catch (err) { console.error('[receipt mail]', err.message); }
@@ -158,13 +161,17 @@ admin.post('/receipts/:id/decline', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// The filled receipt, for printing or saving as PDF. Draft until issued.
+// The filled receipt as a PDF — the same file the donor is sent. Opens in the
+// browser's PDF viewer, where Print and Save both work properly.
 admin.get('/receipts/:id/print', async (req, res, next) => {
   try {
     const [[row]] = await pool.query('SELECT * FROM receipt_requests WHERE id = ?', [Number(req.params.id)]);
     if (!row) return res.status(404).send('Not found');
     if (!row.issuer_name) row.issuer_name = req.user.name || '';
-    res.type('html').send(receiptHtml(row, SITE()));
+    const pdf = await receiptPdf(row);
+    res.type('application/pdf')
+      .setHeader('Content-Disposition', `inline; filename="tug-comanche-receipt-${row.receipt_no || 'draft-' + row.id}.pdf"`);
+    res.send(pdf);
   } catch (err) { next(err); }
 });
 

@@ -130,7 +130,7 @@ function Detail({ row, me, onDone }) {
         {msg && <div className={`form-msg ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</div>}
         <div className="btn-row">
           <button className="btn btn-outline" onClick={save} disabled={busy}>Save changes</button>
-          <a className="btn btn-outline" href={`/api/admin/receipts/${row.id}/print`} target="_blank" rel="noreferrer">Print / PDF</a>
+          <a className="btn btn-outline" href={`/api/admin/receipts/${row.id}/print`} target="_blank" rel="noreferrer">Open PDF</a>
           <button className="btn btn-primary" onClick={() => issue(true)} disabled={busy}>
             {row.status === 'issued' ? 'Re-send by email' : 'Issue & email to donor'}
           </button>
