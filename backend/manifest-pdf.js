@@ -118,8 +118,9 @@ function manifestPdf(sailing, roster, counts, preparedBy) {
   }
 
   // --- signature ----------------------------------------------------------
-  if (y > 640) { doc.addPage(); y = 60; }
-  y = Math.max(y + 16, 660);
+  // Pin the closing block so the signature lines never crowd the footer.
+  if (y > 620) { doc.addPage(); y = 60; }
+  y = Math.max(y + 16, 632);
   doc.font('Helvetica').fontSize(7.5).fillColor('#333').text(
     'This manifest is generated from waivers signed by each person aboard and from check-in records taken at the brow. ' +
     'Children are persons under 18 and are aboard in the care of the named adult. Comanche is not a passenger vessel for hire; ' +
