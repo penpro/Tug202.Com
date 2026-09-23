@@ -38,6 +38,17 @@ export default function Visit() {
                   open-ship date, or <Link to="/contact">send us a note</Link>.
                 </p>
               </div>
+              <div className="notice" style={{ borderLeftColor: 'var(--stripe)' }}>
+                <p style={{ marginTop: 0 }}>
+                  <strong>Save yourself a queue at the brow.</strong> Everyone who comes aboard signs
+                  a liability waiver once a season. <Link to="/waiver">Sign it online</Link> and we
+                  email you a QR boarding pass &mdash; show it when you arrive and you walk straight on.
+                </p>
+                <p style={{ marginBottom: 0 }} className="small">
+                  Wear flat, closed-toe shoes with a grip. Comanche is a 1943 working vessel with steep
+                  ladders and high sills; she is not accessible.
+                </p>
+              </div>
               <p>
                 Open-ship days are announced a few weeks ahead. Groups &mdash; schools, scouts,
                 veterans&rsquo; organizations, maritime clubs &mdash; can request a dedicated tour

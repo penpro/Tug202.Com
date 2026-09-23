@@ -10,7 +10,10 @@ export default function FloatingActions() {
   const [open, setOpen] = useState(false)
   const closeBtn = useRef(null)
   const { pathname } = useLocation()
-  const hidden = pathname.startsWith('/admin')
+  // Not in the portal, and not on the pages someone uses while standing at the
+  // brow: a stray Donate tap in the middle of signing a waiver is the last
+  // thing anyone needs.
+  const hidden = /^\/(admin|waiver|pass)/.test(pathname)
 
   // Close on route change and on Escape; lock body scroll while open.
   useEffect(() => { setOpen(false) }, [pathname])
