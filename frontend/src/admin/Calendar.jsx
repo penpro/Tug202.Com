@@ -24,7 +24,9 @@ export default function Calendar() {
   if (!rows) return <p className="small">Loading&hellip;</p>
 
   const today = new Date().toISOString().slice(0, 10)
+  // Soonest first for what's ahead; most recent first for what's done.
   const upcoming = rows.filter(r => String(r.sail_date).slice(0, 10) >= today)
+    .sort((a, b) => String(a.sail_date).localeCompare(String(b.sail_date)))
   const past = rows.filter(r => String(r.sail_date).slice(0, 10) < today)
 
   const Row = ({ r }) => (
