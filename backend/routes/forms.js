@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db');
 const { notify } = require('../mailer');
 const { mailManageLink } = require('./selfserve');
+const { upsertContact } = require('../crm');
 const { str, email, isHoneypotTripped } = require('../validate');
 
 const router = express.Router();
@@ -26,6 +27,12 @@ router.post('/contact', async (req, res, next) => {
       'INSERT INTO contact_messages (name, email, topic, message, ip) VALUES (?, ?, ?, ?, ?)',
       [name, from, topic, message, req.ip]
     );
+    // Writing in isn't subscribing: recorded, but opted into nothing.
+    await upsertContact({
+      email: from, name, source: 'contact', sourceRef: topic || 'contact form',
+      note: topic ? `Wrote in about: ${topic}` : '', statusNote: 'wrote to us on the website'
+    }, { prefs: { newsletter: false, volunteer: false, events: false, reunions: false } });
+
     notify(
       `[tug202.org] Contact: ${topic || 'General'} — ${name}`,
       `From: ${name} <${from}>\nTopic: ${topic}\n\n${message}`,
@@ -57,6 +64,12 @@ router.post('/volunteer', async (req, res, next) => {
       'INSERT INTO volunteer_signups (name, email, phone, interests, experience, availability, ip) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [name, from, phone, interests, experience, availability, req.ip]
     );
+    await upsertContact({
+      email: from, name, phone, source: 'volunteer', sourceRef: 'volunteer form', tags: 'volunteer', optin: 1,
+      note: [interests && `Interests: ${interests}`, availability && `Availability: ${availability}`, experience].filter(Boolean).join('\n'),
+      statusNote: 'volunteered on the website'
+    }, { prefs: { newsletter: true, volunteer: true, events: true, reunions: false } });
+
     notify(
       `[tug202.org] Volunteer signup — ${name}`,
       `Name: ${name}\nEmail: ${from}\nPhone: ${phone}\nInterests: ${interests}\nAvailability: ${availability}\n\nExperience:\n${experience}`,
@@ -95,6 +108,11 @@ router.post('/partner', async (req, res, next) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [orgName, contactName, from, phone, purpose, headcount, location, dates, mode, duration, accessibility, equipment, resources, req.ip]
     );
+    await upsertContact({
+      email: from, name: contactName, phone, city: location, source: 'partner', sourceRef: orgName, tags: 'partner',
+      note: [`Organization: ${orgName}`, purpose].filter(Boolean).join('\n'), statusNote: 'partner inquiry on the website'
+    }, { prefs: { newsletter: true, volunteer: false, events: true, reunions: false } });
+
     notify(
       `[tug202.org] Partnership inquiry — ${orgName}`,
       [
@@ -163,11 +181,9 @@ router.post('/newsletter', async (req, res, next) => {
     );
     // New to us: give them a CRM record too, so the portal has one list.
     if (!known) {
-      const [ins] = await pool.execute(
-        "INSERT INTO contacts (name, source, source_ref, optin, notes) VALUES (?, 'signup', 'website', 1, ?)", [name, note]);
-      await pool.execute(
-        "INSERT IGNORE INTO contact_emails (contact_id, email, kind, confidence, status, status_at, status_note) VALUES (?, ?, 'primary', 'high', 'confirmed', NOW(), 'signed up on the website')",
-        [ins.insertId, from]);
+      await upsertContact(
+        { email: from, name, source: 'signup', sourceRef: 'newsletter form', note, optin: 1, statusNote: 'signed up on the website' },
+        { prefs });
     }
 
     const chosen = Object.entries(prefs).filter(([, v]) => v).map(([k]) => k).join(', ');
