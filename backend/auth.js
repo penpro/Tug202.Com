@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const pool = require('./db');
 const { str, email } = require('./validate');
 const { send } = require('./mailer');
+const { upsertContact } = require('./crm');
 
 // ---------------------------------------------------------------------------
 // Portal auth: sessions + bcrypt. First account is created by
@@ -101,6 +102,8 @@ router.post('/setup', loginLimiter, async (req, res, next) => {
     const name = str(req.body?.name, 120) || t.name;
     const hash = await bcrypt.hash(pw, 12);
     await pool.execute('UPDATE users SET password_hash = ?, name = ?, is_active = 1 WHERE id = ?', [hash, name, t.user_id]);
+    const [[who]] = await pool.query('SELECT email FROM users WHERE id = ?', [t.user_id]);
+    if (who) await upsertContact({ email: who.email, name, source: 'board', tags: 'board', optin: 1 }).catch(() => {});
     await pool.execute('UPDATE user_tokens SET used_at = NOW() WHERE id = ?', [t.id]);
     const [[u]] = await pool.query('SELECT * FROM users WHERE id = ?', [t.user_id]);
     await new Promise((r, j) => req.session.regenerate(err => err ? j(err) : r()));
@@ -142,6 +145,11 @@ users.post('/users', async (req, res, next) => {
     const [[exists]] = await pool.query('SELECT id FROM users WHERE email = ?', [e]);
     if (exists) return res.status(409).json({ error: 'That email already has an account' });
     const [r] = await pool.execute('INSERT INTO users (email, name, role, created_by) VALUES (?, ?, ?, ?)', [e, name, role, req.user.id || null]);
+    // Board members belong on the mailing list too — they should see the news
+    // their own foundation sends. Tagged 'board' so they're easy to pick out.
+    await upsertContact({ email: e, name, source: 'board', sourceRef: `portal ${role}`, tags: 'board', optin: 1,
+      statusNote: 'board member / portal user' }).catch(err => console.error('[crm]', err.message));
+
     const link = await issueToken(r.insertId, 'setup');
     const mailed = await send(e, 'Your Tug Comanche admin account',
       `${req.user.name || 'An admin'} has given you access to the tug202.org admin portal.\n\nSet your password here (link valid 7 days):\n${link}\n\nIf you weren't expecting this, ignore it.`);

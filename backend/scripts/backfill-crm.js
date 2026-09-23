@@ -47,6 +47,17 @@ const SOURCES = [
     })
   },
   {
+    label: 'portal users',
+    sql: `SELECT u.email, u.name, u.role FROM users u
+          LEFT JOIN contact_emails ce ON ce.email = u.email WHERE ce.email IS NULL`,
+    map: (r) => ({
+      who: { email: r.email, name: r.name, source: 'board', sourceRef: `portal ${r.role}`, tags: 'board', optin: 1,
+        statusNote: 'board member / portal user' },
+      // The board gets everything unless they say otherwise.
+      opts: { prefs: { newsletter: true, volunteer: true, events: true, reunions: true } }
+    })
+  },
+  {
     label: 'contact messages',
     sql: `SELECT m.email, m.name, m.topic FROM contact_messages m
           LEFT JOIN contact_emails ce ON ce.email = m.email WHERE ce.email IS NULL GROUP BY m.email, m.name, m.topic`,
