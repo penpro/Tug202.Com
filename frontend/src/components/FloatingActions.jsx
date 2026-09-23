@@ -13,7 +13,7 @@ export default function FloatingActions() {
   // Not in the portal, and not on the pages someone uses while standing at the
   // brow: a stray Donate tap in the middle of signing a waiver is the last
   // thing anyone needs.
-  const hidden = /^\/(admin|waiver|pass)/.test(pathname)
+  const hidden = /^\/(admin|waiver|pass|e)(\/|$)/.test(pathname)
 
   // Close on route change and on Escape; lock body scroll while open.
   useEffect(() => { setOpen(false) }, [pathname])
