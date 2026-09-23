@@ -9,6 +9,8 @@ import News from './News.jsx'
 import Users from './Users.jsx'
 import Mail from './Mail.jsx'
 import Receipts from './Receipts.jsx'
+import Sailings from './Sailings.jsx'
+import Waivers from './Waivers.jsx'
 
 // ---------------------------------------------------------------------------
 // /admin — board portal. Session-cookie auth (see backend/auth.js).
@@ -34,6 +36,8 @@ function Shell({ user, onSignOut }) {
     { to: '/admin', label: 'Dashboard', end: true },
     { to: '/admin/inbox', label: 'Inbox' },
     { to: '/admin/contacts', label: 'Contacts' },
+    { to: '/admin/sailings', label: 'Sailings' },
+    { to: '/admin/waivers', label: 'Waivers' },
     { to: '/admin/receipts', label: 'Receipts' },
     { to: '/admin/news', label: 'News' },
     { to: '/admin/mail', label: 'Mail' },
@@ -54,6 +58,8 @@ function Shell({ user, onSignOut }) {
         <Route index element={<Dashboard />} />
         <Route path="inbox" element={<Inbox />} />
         <Route path="contacts" element={<Contacts />} />
+        <Route path="sailings" element={<Sailings />} />
+        <Route path="waivers" element={<Waivers />} />
         <Route path="receipts" element={<Receipts me={user} />} />
         <Route path="news" element={<News />} />
         <Route path="mail" element={<Mail />} />

@@ -13,6 +13,7 @@ const newsRouter = require('./routes/news');
 const adminRouter = require('./routes/admin');
 const { router: selfServeRouter } = require('./routes/selfserve');
 const { pub: receiptsPublic } = require('./routes/receipts');
+const { pub: boardingPublic } = require('./routes/boarding');
 const { pub: blastsPublic } = require('./routes/blasts');
 
 const app = express();
@@ -78,6 +79,9 @@ app.use('/api', selfServeRouter);   // /manage — signed links from emails, no 
 app.use('/api/auth', authRouter);
 app.use('/api', formLimiter, formsRouter);
 app.use('/api', formLimiter, receiptsPublic);
+// Waiver signing has its own, higher ceiling: a tablet at the brow signs many
+// people from one address during boarding.
+app.use('/api', boardingPublic);
 app.use('/api', newsRouter);
 app.use('/api/admin', adminRouter);
 

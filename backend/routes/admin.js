@@ -7,6 +7,7 @@ const { admin: blastsAdmin } = require('./blasts');
 const peopleRouter = require('./people');
 const dmarcRouter = require('./dmarc');
 const { admin: receiptsAdmin } = require('./receipts');
+const { admin: boardingAdmin } = require('./boarding');
 
 // Everything under /api/admin needs a signed-in portal user (see auth.js).
 // The static ADMIN_TOKEN bearer still works for curl scripts.
@@ -21,6 +22,7 @@ router.use(contactsRouter);
 router.use(peopleRouter);
 router.use(dmarcRouter);
 router.use(receiptsAdmin);
+router.use(boardingAdmin);
 
 router.get('/contacts', async (req, res, next) => {
   try {
