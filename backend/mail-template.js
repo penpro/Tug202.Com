@@ -62,6 +62,18 @@ const unsubUrl = (email) => `${SITE()}/api/unsubscribe?t=${unsubToken(email)}`;
 const confirmUrl = (email, blastId) => `${SITE()}/api/confirm?t=${signedToken('confirm', email, blastId)}`;
 const verifyConfirmToken = (t) => verifySignedToken('confirm', t);
 
+// Self-service record link. Expires, because it opens someone's details: the
+// expiry rides inside the signed body, so a stale link can't be edited into a
+// fresh one.
+const MANAGE_DAYS = 14;
+const manageToken = (email) => signedToken('manage', email, Math.floor(Date.now() / 1000) + MANAGE_DAYS * 86400);
+const manageUrl = (email) => `${SITE()}/api/manage?t=${manageToken(email)}`;
+function verifyManageToken(t) {
+  const v = verifySignedToken('manage', t);
+  if (!v || !v.blastId) return null;               // blastId slot carries the expiry
+  return v.blastId > Math.floor(Date.now() / 1000) ? v.email : null;
+}
+
 // ---- merge fields -----------------------------------------------------------
 // r: { email, name, blastId? }
 function merge(s, r) {
@@ -153,4 +165,4 @@ function render(blast, r) {
   return { subject, html, text, unsub, confirm };
 }
 
-module.exports = { render, merge, unsubToken, verifyUnsubToken, unsubUrl, confirmUrl, verifyConfirmToken, HERO_POOL, resolveImage };
+module.exports = { render, merge, unsubToken, verifyUnsubToken, unsubUrl, confirmUrl, verifyConfirmToken, manageUrl, verifyManageToken, MANAGE_DAYS, HERO_POOL, resolveImage };

@@ -1,0 +1,11 @@
+// Small server-rendered pages for links in emails (preference centre, the
+// self-service record page). Deliberately not React: these have to work in a
+// webmail client's in-app browser with no JavaScript.
+
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const page = (title, body) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title>
+<style>body{font-family:Georgia,serif;background:#f6f1e7;color:#1a1f2b;margin:0;padding:40px 16px}.c{max-width:560px;margin:0 auto;background:#fffdf8;border-top:5px solid #d9422b;padding:28px 32px}h1{font-family:Arial,sans-serif;text-transform:uppercase;font-size:22px;color:#0b1f3a;margin:0 0 12px}h2{font-family:Arial,sans-serif;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#0b1f3a;margin:22px 0 8px;padding-top:14px;border-top:1px solid #e6e0d3}a{color:#1d4278}.s{font-size:13px;color:#7a8190}.g{display:flex;gap:10px;align-items:flex-start;margin:10px 0}.g input{margin-top:5px}label.f{display:block;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#0b1f3a;margin:10px 0 3px}input[type=text],input[type=email]{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #c3bcae;border-radius:4px;font:inherit;font-size:15px;background:#fff}.b{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:.04em;padding:11px 20px;border:0;border-radius:4px;background:#0b1f3a;color:#fff;cursor:pointer}.b.out{background:none;border:1px solid #c3bcae;color:#7a8190;font-weight:normal}.b.sm{font-size:12px;padding:6px 12px}.ok{background:#e8f2e9;border-left:4px solid #1f6b2a;padding:8px 12px}.row{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px dotted #e6e0d3;padding:8px 0;flex-wrap:wrap}form{margin:0}.pill{font-family:Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7a8190}</style></head>
+<body><div class="c"><h1>${title}</h1>${body}<p class="s">Tug Comanche Historical Rescue Foundation &middot; <a href="https://tug202.org">tug202.org</a></p></div></body></html>`;
+
+module.exports = { page, esc };

@@ -11,6 +11,7 @@ const { router: authRouter } = require('./auth');
 const formsRouter = require('./routes/forms');
 const newsRouter = require('./routes/news');
 const adminRouter = require('./routes/admin');
+const { router: selfServeRouter } = require('./routes/selfserve');
 const { pub: blastsPublic } = require('./routes/blasts');
 
 const app = express();
@@ -72,6 +73,7 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+app.use('/api', selfServeRouter);   // /manage — signed links from emails, no session
 app.use('/api/auth', authRouter);
 app.use('/api', formLimiter, formsRouter);
 app.use('/api', newsRouter);

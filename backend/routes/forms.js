@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { notify } = require('../mailer');
+const { mailManageLink } = require('./selfserve');
 const { str, email, isHoneypotTripped } = require('../validate');
 
 const router = express.Router();
@@ -132,6 +133,12 @@ router.post('/newsletter', async (req, res, next) => {
       return res.status(400).json({ error: 'Pick at least one kind of email to receive.' });
     }
 
+    // Already on file? Don't create a second record, and don't show their
+    // details to whoever typed the address — mail a signed link to the address
+    // itself, so only the person reading that mailbox can see or change it.
+    const [[known]] = await pool.query(
+      'SELECT 1 AS hit FROM contact_emails WHERE email = ? UNION SELECT 1 FROM newsletter_subscribers WHERE email = ? LIMIT 1', [from, from]);
+
     // mail_prefs is the one place blasts read topics from; keep it in step.
     await pool.execute(
       `INSERT INTO mail_prefs (email, newsletter, volunteer, events, reunions, source) VALUES (?, ?, ?, ?, ?, 'signup')
@@ -154,6 +161,15 @@ router.post('/newsletter', async (req, res, next) => {
          unsubscribed_at = NULL`,
       [from, name, prefs.newsletter ? 1 : 0, prefs.volunteer ? 1 : 0, prefs.events ? 1 : 0, prefs.reunions ? 1 : 0, note, req.ip]
     );
+    // New to us: give them a CRM record too, so the portal has one list.
+    if (!known) {
+      const [ins] = await pool.execute(
+        "INSERT INTO contacts (name, source, source_ref, optin, notes) VALUES (?, 'signup', 'website', 1, ?)", [name, note]);
+      await pool.execute(
+        "INSERT IGNORE INTO contact_emails (contact_id, email, kind, confidence, status, status_at, status_note) VALUES (?, ?, 'primary', 'high', 'confirmed', NOW(), 'signed up on the website')",
+        [ins.insertId, from]);
+    }
+
     const chosen = Object.entries(prefs).filter(([, v]) => v).map(([k]) => k).join(', ');
     if (prefs.volunteer || note) {
       notify(
@@ -164,6 +180,16 @@ Wants: ${chosen}
 Note: ${note}`,
         from
       );
+    }
+    if (known) {
+      let mailed = true;
+      try { await mailManageLink(from, name); } catch (err) { mailed = false; console.error('[manage-link]', err.message); }
+      return res.json({
+        known: true,
+        message: mailed
+          ? `We already have ${from} on our list — your preferences are updated. We have emailed you a link to your own details, where you can correct your name, add or remove an address, or change what we send.`
+          : `We already have ${from} on our list, and your preferences are updated. We could not email you a link to your details just now — write to us and we will sort it out by hand.`
+      });
     }
     res.json({ message: 'You’re on the list — thank you. Watch for ship’s mail.' });
   } catch (err) { next(err); }

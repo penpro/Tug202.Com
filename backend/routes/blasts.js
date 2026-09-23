@@ -5,6 +5,7 @@ const { str, email } = require('../validate');
 const { deliver, suppressed, backendName } = require('../mailer');
 const { render, verifyUnsubToken, verifyConfirmToken, HERO_POOL } = require('../mail-template');
 const { GROUPS, KEYS: GROUP_KEYS, isGroup, labelOf } = require('../mail-groups');
+const { page, esc } = require('../public-page');
 
 // ---------------------------------------------------------------------------
 // Mail blasts.
@@ -325,30 +326,6 @@ async function prefsFor(e) {
   return Object.fromEntries(GROUP_KEYS.map(k => [k, row ? !!row[k] : true]));
 }
 
-const page = (title, body) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title>
-<style>body{font-family:Georgia,serif;background:#f6f1e7;color:#1a1f2b;margin:0;padding:40px 16px}.c{max-width:520px;margin:0 auto;background:#fffdf8;border-top:5px solid #d9422b;padding:28px 32px}h1{font-family:Arial,sans-serif;text-transform:uppercase;font-size:22px;color:#0b1f3a;margin:0 0 12px}a{color:#1d4278}.s{font-size:13px;color:#7a8190}.g{display:flex;gap:10px;align-items:flex-start;margin:10px 0}.g input{margin-top:5px}.b{font-family:Arial,sans-serif;font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:.04em;padding:11px 20px;border:0;border-radius:4px;background:#0b1f3a;color:#fff;cursor:pointer}.b.out{background:none;border:1px solid #c3bcae;color:#7a8190;font-weight:normal}.ok{background:#e8f2e9;border-left:4px solid #1f6b2a;padding:8px 12px}form{margin:0}</style></head>
-<body><div class="c"><h1>${title}</h1>${body}<p class="s">Tug Comanche Historical Rescue Foundation · <a href="https://tug202.org">tug202.org</a></p></div></body></html>`;
-
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-// The preference centre: pick the kinds of mail to keep, or leave entirely.
-// Reached from the footer link in every email.
-function prefsPage(e, t, prefs, saved) {
-  const boxes = GROUPS.map(g => `<label class="g"><input type="checkbox" name="g" value="${g.key}"${prefs[g.key] ? ' checked' : ''}>
-    <span><strong>${esc(g.label)}</strong><br><span class="s">${esc(g.hint)}</span></span></label>`).join('');
-  return page('Your email preferences', `
-    ${saved ? '<p class="ok">Saved. Thank you.</p>' : ''}
-    <p>For <strong>${esc(e)}</strong>. Tick what you would like to keep receiving:</p>
-    <form method="POST" action="/api/preferences?t=${encodeURIComponent(t)}">
-      ${boxes}
-      <p><button class="b" type="submit">Save my preferences</button></p>
-    </form>
-    <form method="POST" action="/api/unsubscribe?t=${encodeURIComponent(t)}">
-      <p><button class="b out" type="submit">Unsubscribe from everything</button></p>
-    </form>
-    <p class="s">We send a few emails a year and never sell your address.</p>`);
-}
-
 pub.get('/unsubscribe', async (req, res, next) => {
   try {
     const e = verifyUnsubToken(req.query.t);
@@ -431,4 +408,4 @@ pub.post('/ses/events', express.text({ type: '*/*', limit: '256kb' }), async (re
   } catch (err) { console.error('[ses:events]', err.message); res.status(400).end(); }
 });
 
-module.exports = { admin, pub, startBlast, buildAudience, syncSuppression };
+module.exports = { admin, pub, startBlast, buildAudience, syncSuppression, savePrefs, unsubscribeAll: unsubscribe };
