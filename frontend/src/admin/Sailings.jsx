@@ -61,7 +61,7 @@ function NewSailing({ onDone }) {
     <div className="form" style={{ maxWidth: 'none', border: '1px solid var(--line)', borderRadius: 6, padding: 16, margin: '12px 0' }}>
       <div className="row">
         <div><label>Date *</label><input type="date" value={f.sail_date} onChange={set('sail_date')} /></div>
-        <div><label>What is it?</label><input value={f.title} onChange={set('title')} placeholder="Olympia Harbor Days cruise" /></div>
+        <div><label>What is it?</label><input value={f.title} onChange={set('title')} placeholder="Fall cruise on Budd Inlet" /></div>
       </div>
       <div className="row">
         <div><label>Where from</label><input value={f.location} onChange={set('location')} placeholder="Percival Landing" /></div>

@@ -138,7 +138,7 @@ function EventForm({ row, onDone }) {
               <select value={f.kind} onChange={e => setF(x => ({ ...x, kind: e.target.value }))} disabled={!!f.id}>
                 <option value="cruise">Cruise</option><option value="workday">Work day</option>
               </select></div>
-            <div><label>Title</label><input value={f.title} onChange={set('title')} placeholder={cruise ? 'Harbor Days cruise with AHA' : 'Deck work party'} /></div>
+            <div><label>Title</label><input value={f.title} onChange={set('title')} placeholder={cruise ? 'Fall cruise on Budd Inlet' : 'Deck work party'} /></div>
           </div>
           <div className="row">
             <div><label>Date *</label><input type="date" value={f.sail_date} onChange={set('sail_date')} /></div>
@@ -162,7 +162,7 @@ function EventForm({ row, onDone }) {
               <div><label>Proposed route</label><textarea style={{ minHeight: 60 }} value={f.route} onChange={set('route')} placeholder="Out of Budd Inlet, north past Boston Harbor, around Hope Island and back." /></div>
               <div className="row">
                 <div><label>Recommended donation</label><input value={f.donation} onChange={set('donation')} placeholder="$75 per person" /></div>
-                <div><label>Sponsor</label><input value={f.sponsor} onChange={set('sponsor')} placeholder="AHA" /></div>
+                <div><label>Sponsor</label><input value={f.sponsor} onChange={set('sponsor')} placeholder="Partner organization" /></div>
               </div>
               <div><label>From the sponsor <span className="small">(their words, shown on the page)</span></label>
                 <textarea style={{ minHeight: 90 }} value={f.sponsor_info} onChange={set('sponsor_info')} /></div>
