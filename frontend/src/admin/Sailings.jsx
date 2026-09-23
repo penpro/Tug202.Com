@@ -134,13 +134,13 @@ export function Sailing({ id, onBack }) {
 
       <div className="btn-row">
         <button className={scanning ? 'btn btn-primary' : 'btn btn-outline'} onClick={() => { setScanning(v => !v); setFlash(null) }}>
-          {scanning ? 'Stop scanning' : '📷 Scan boarding passes'}
+          {scanning ? 'Close scanner' : '📷 Scan boarding passes'}
         </button>
         <a className="btn btn-outline" href={`/waiver?kiosk=1&sailing=${id}`} target="_blank" rel="noreferrer">Open tablet sign-in</a>
         <a className="btn btn-outline" href={`/api/admin/sailings/${id}/manifest`} target="_blank" rel="noreferrer">📋 Manifest PDF</a>
       </div>
 
-      {scanning && <Scanner onCode={(code) => checkIn({ code })} onError={(m) => setFlash({ ok: false, error: m })} />}
+      {scanning && <Scanner onCode={(code) => checkIn({ code })} onError={(m) => m && setFlash({ ok: false, error: m })} />}
       {flash && <Flash flash={flash} onClose={() => setFlash(null)} />}
 
       <div className="form" style={{ maxWidth: 'none', marginTop: 10 }}>
@@ -237,13 +237,33 @@ function Flash({ flash, onClose }) {
 // Camera scanner. Uses the browser's own barcode reader where it exists
 // (Android Chrome), and falls back to decoding frames with jsQR everywhere
 // else (iPhone Safari has no BarcodeDetector).
+//
+// Asking for the camera has to be a deliberate tap, not a side effect of the
+// component mounting: browsers only show the permission prompt in response to
+// a gesture, and once someone has denied it they are never asked again — so
+// every failure here names what went wrong and how to undo it.
 function Scanner({ onCode, onError }) {
   const video = useRef(null), canvas = useRef(null), stop = useRef(false), lastCode = useRef({ v: '', t: 0 })
-  const [ready, setReady] = useState(false)
+  const streamRef = useRef(null)
+  const [phase, setPhase] = useState('idle')   // idle | starting | live | blocked | unavailable
+  const [detail, setDetail] = useState('')
 
+  // If the browser will tell us the permission is already denied, say so
+  // before the person taps and nothing happens.
   useEffect(() => {
+    let alive = true
+    navigator.permissions?.query({ name: 'camera' })
+      .then(st => { if (alive && st.state === 'denied') { setPhase('blocked'); setDetail('Camera access is blocked for this site.') } })
+      .catch(() => {})   // Firefox and older Safari don't support querying it
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => () => { stop.current = true; streamRef.current?.getTracks().forEach(t => t.stop()) }, [])
+
+  const start = async () => {
+    setPhase('starting'); setDetail('')
     stop.current = false
-    let stream, detector
+    let detector
     const hit = (value) => {
       const now = Date.now()
       if (value === lastCode.current.v && now - lastCode.current.t < 3000) return   // don't re-read the same pass
@@ -272,31 +292,86 @@ function Scanner({ onCode, onError }) {
       }
       setTimeout(tick, 220)
     }
-    ;(async () => {
-      try {
-        if ('BarcodeDetector' in window) {
-          const formats = await window.BarcodeDetector.getSupportedFormats()
-          if (formats.includes('qr_code')) detector = new window.BarcodeDetector({ formats: ['qr_code'] })
-        }
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        video.current.srcObject = stream
-        await video.current.play()
-        setReady(true); tick()
-      } catch (e) {
-        onError(e.name === 'NotAllowedError'
-          ? 'Camera blocked. Allow camera access for tug202.org, or type the code instead.'
-          : `Camera unavailable (${e.message}). Type the code instead.`)
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setPhase('unavailable')
+        setDetail(window.isSecureContext === false
+          ? 'The camera only works over https. Open this page at https://tug202.org/admin.'
+          : 'This browser will not hand over the camera. On an iPhone open the portal in Safari itself, not inside the Facebook or Messenger browser.')
+        return
       }
-    })()
-    return () => { stop.current = true; stream?.getTracks().forEach(t => t.stop()) }
-  }, []) // eslint-disable-line
+      if ('BarcodeDetector' in window) {
+        const formats = await window.BarcodeDetector.getSupportedFormats()
+        if (formats.includes('qr_code')) detector = new window.BarcodeDetector({ formats: ['qr_code'] })
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+      streamRef.current = stream
+      video.current.srcObject = stream
+      await video.current.play()
+      setPhase('live'); tick()
+    } catch (e) {
+      const name = e.name || ''
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        setPhase('blocked')
+        setDetail('You (or this browser) said no to the camera.')
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        setPhase('unavailable'); setDetail('No camera found on this device.')
+      } else if (name === 'NotReadableError') {
+        setPhase('unavailable'); setDetail('Another app is using the camera. Close it and try again.')
+      } else {
+        setPhase('unavailable'); setDetail(e.message || 'The camera would not start.')
+      }
+      onError?.('')
+    }
+  }
+
+  const halt = () => {
+    stop.current = true
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    setPhase('idle')
+  }
+
+  if (phase === 'idle' || phase === 'starting') return (
+    <div className="notice" style={{ textAlign: 'center' }}>
+      <p style={{ marginTop: 0 }}>Hold each boarding pass up to the camera &mdash; it checks people in as it reads them.</p>
+      <button className="btn btn-primary" onClick={start} disabled={phase === 'starting'}>
+        {phase === 'starting' ? 'Starting camera…' : '📷 Allow camera & start scanning'}
+      </button>
+      <p className="small" style={{ marginBottom: 0 }}>Your browser will ask permission the first time. You can always type the code instead.</p>
+    </div>
+  )
+
+  if (phase === 'blocked' || phase === 'unavailable') return (
+    <div className="form-msg err">
+      <p style={{ marginTop: 0 }}><strong>Camera unavailable.</strong> {detail}</p>
+      {phase === 'blocked' && (
+        <>
+          <p style={{ marginBottom: 4 }}>To let it back in:</p>
+          <ul style={{ margin: '0 0 8px', paddingLeft: 20 }}>
+            <li><strong>iPhone/iPad (Safari):</strong> tap the <strong>ᴀA</strong> icon in the address bar &rarr; Website Settings &rarr; Camera &rarr; Allow. Then reload.</li>
+            <li><strong>Android (Chrome):</strong> tap the lock icon beside the address &rarr; Permissions &rarr; Camera &rarr; Allow. Then reload.</li>
+            <li><strong>Desktop:</strong> click the camera or lock icon in the address bar and allow tug202.org.</li>
+          </ul>
+        </>
+      )}
+      <p style={{ marginBottom: 0 }}>
+        <button className="btn btn-outline" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={start}>Try again</button>
+        <span className="small" style={{ marginLeft: 10 }}>Or type the 8-character code from the pass below &mdash; it works just as well.</span>
+      </p>
+    </div>
+  )
 
   return (
     <div style={{ margin: '10px 0', position: 'relative', background: '#000', borderRadius: 8, overflow: 'hidden', maxWidth: 420 }}>
       <video ref={video} playsInline muted style={{ width: '100%', display: 'block' }} />
       <canvas ref={canvas} style={{ display: 'none' }} />
       <div style={{ position: 'absolute', inset: '18% 12%', border: '3px solid rgba(255,255,255,.85)', borderRadius: 10, pointerEvents: 'none' }} />
-      {!ready && <p className="small" style={{ position: 'absolute', bottom: 8, left: 12, color: '#fff' }}>Starting camera&hellip;</p>}
+      <button className="btn btn-outline" onClick={halt}
+        style={{ position: 'absolute', right: 8, top: 8, padding: '4px 10px', fontSize: '0.78rem', background: 'rgba(0,0,0,.55)', color: '#fff', borderColor: 'rgba(255,255,255,.6)' }}>
+        Stop
+      </button>
     </div>
   )
 }
