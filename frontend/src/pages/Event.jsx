@@ -118,18 +118,26 @@ function SignupForm({ code, event }) {
   const per = Number(event.donation_amount) || 0
   const [f, setF] = useState({ name: '', email: '', phone: '', adults: 1, minor_count: 0, bringing: '', skills: '', optin: true, pledge: true, website: '' })
   const [state, setState] = useState({ status: 'idle', message: '', out: null })
+  const [amount, setAmount] = useState('')      // what they will actually give
+  const [edited, setEdited] = useState(false)   // true once they type their own figure
   const set = (k) => (e) => setF(x => ({ ...x, [k]: e.target.value }))
 
   // What we are asking this party for, given how many are coming.
   const adults = Math.max(1, Number(f.adults) || 1)
-  const total = per > 0 ? (event.donation_per === 'party' ? per : per * adults) : 0
+  const suggested = per > 0 ? (event.donation_per === 'party' ? per : per * adults) : 0
+  // Follow the party size until they override it; after that the figure is
+  // theirs and we leave it alone.
+  useEffect(() => { if (!edited) setAmount(suggested > 0 ? String(suggested) : '') }, [suggested, edited])
+  const typed = Number(amount)
+  const total = Number.isFinite(typed) && typed > 0 ? typed : 0
 
   const submit = async (e) => {
     e.preventDefault()
     setState({ status: 'sending', message: '', out: null })
     try {
       const res = await fetch(`/api/event/${encodeURIComponent(code)}/register`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f)
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...f, pledge_amount: f.pledge ? total : null })
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || 'Something went wrong')
@@ -170,8 +178,8 @@ function SignupForm({ code, event }) {
           <br /><code style={{ fontSize: '1.4rem', letterSpacing: '.12em' }}>{state.out.pass_code}</code>
         </p>
       )}
-      {!giving && total > 0 && donate.onlineUrl && (
-        <p><a className="btn btn-primary" href={`${donate.onlineUrl}?amount=${Math.round(total)}`}>Chip in {money(total)} after all</a></p>
+      {!giving && suggested > 0 && donate.onlineUrl && (
+        <p><a className="btn btn-primary" href={`${donate.onlineUrl}?amount=${Math.round(suggested)}`}>Chip in {money(suggested)} after all</a></p>
       )}
     </div>
   )
@@ -193,19 +201,34 @@ function SignupForm({ code, event }) {
         <div><label htmlFor="ev-bring">Anything you can bring?</label><input id="ev-bring" value={f.bringing} onChange={set('bringing')} placeholder="Grinder, extension cord, a truck…" /></div>
         <div><label htmlFor="ev-skills">Anything you&rsquo;re handy at?</label><input id="ev-skills" value={f.skills} onChange={set('skills')} placeholder="Welding, diesel, painting, cooking…" /></div>
       </>}
-      {total > 0 && (
-        <label className="check" style={{ background: '#fff6f3', border: '1px solid var(--line)', borderRadius: 6, padding: '10px 12px' }}>
-          <input type="checkbox" checked={f.pledge} onChange={e => setF(x => ({ ...x, pledge: e.target.checked }))} />
-          <span>
-            <strong>Yes, I&rsquo;ll give the suggested donation &mdash; {money(total)}</strong>
-            <br /><span className="small">
-              {event.donation_per === 'party' ? 'For your whole party. ' : `${money(per)} each for ${adults} adult${adults === 1 ? '' : 's'}. `}
-              We&rsquo;ll take you to the donation page as soon as you sign up. It costs about $100 a
-              mile to move her, and donations are what keep her moving &mdash; but they are voluntary,
-              and unticking this box changes nothing about your place aboard.
-            </span>
+      {suggested > 0 && (
+        <div style={{ background: '#fff6f3', border: '1px solid var(--line)', borderRadius: 6, padding: '10px 12px' }}>
+          <label className="check" style={{ margin: 0 }}>
+            <input type="checkbox" checked={f.pledge} onChange={e => setF(x => ({ ...x, pledge: e.target.checked }))} />
+            <span><strong>Yes, I&rsquo;ll chip in for the fuel</strong></span>
+          </label>
+          {f.pledge && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px' }}>
+              <span style={{ fontSize: '1.3rem', fontWeight: 600 }}>$</span>
+              <input type="number" min="1" step="1" inputMode="decimal" aria-label="Donation amount"
+                value={amount} onChange={e => { setEdited(true); setAmount(e.target.value) }}
+                style={{ width: 130, fontSize: '1.15rem', fontWeight: 600 }} />
+              {edited && Number(amount) !== suggested && (
+                <button type="button" className="linkbtn" onClick={() => { setEdited(false); setAmount(String(suggested)) }}>
+                  use {money(suggested)}
+                </button>
+              )}
+            </div>
+          )}
+          <span className="small">
+            {f.pledge
+              ? <>Suggested: <strong>{money(suggested)}</strong>{' '}
+                  {event.donation_per === 'party' ? '(for your whole party)' : `(${money(per)} each for ${adults} adult${adults === 1 ? '' : 's'})`}.
+                  Give more or less &mdash; anything helps. We&rsquo;ll take you to the donation page as soon as you sign up.</>
+              : <>Suggested donation is {money(suggested)}. Donations are voluntary and never a condition of coming aboard.</>}
+            {' '}It costs about $100 a mile to move her, and donations are what keep her moving.
           </span>
-        </label>
+        </div>
       )}
       <label className="check"><input type="checkbox" checked={f.optin} onChange={e => setF(x => ({ ...x, optin: e.target.checked }))} />
         <span>Keep me posted about the ship &mdash; news, work days and cruises</span></label>

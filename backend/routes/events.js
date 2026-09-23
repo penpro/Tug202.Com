@@ -284,9 +284,12 @@ pub.post('/event/:code/register', async (req, res, next) => {
     // intention to give, never a payment — Givebutter is the record of money.
     const pledged = !!b.pledge;
     const per = Number(e.donation_amount) || 0;
-    const pledgeAmount = pledged && per > 0
-      ? (e.donation_per === 'party' ? per : per * adults).toFixed(2)
-      : null;
+    const suggested = per > 0 ? (e.donation_per === 'party' ? per : per * adults) : 0;
+    // They may type their own figure over the suggestion — more often up than
+    // down, in our experience, so never quietly clamp it back to the default.
+    const typed = Number(b.pledge_amount);
+    const chosen = Number.isFinite(typed) && typed > 0 ? Math.min(typed, 100000) : suggested;
+    const pledgeAmount = pledged && chosen > 0 ? chosen.toFixed(2) : null;
 
     const known = (await pool.query(
       'SELECT 1 AS hit FROM contact_emails WHERE email = ? UNION SELECT 1 FROM newsletter_subscribers WHERE email = ? LIMIT 1', [addr, addr]))[0][0];
