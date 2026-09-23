@@ -97,6 +97,8 @@ SES also emails bounce notices to the From address by default; that's harmless n
 
 **Belt and braces:** independently of the webhook, the server pulls SES's account-level *suppression list* (every address that hard-bounced or complained) every hour and marks those addresses `bounced`/`unsubscribed`. The CloudShell script grants the instance role the one extra permission this needs. Pull it on demand with `node scripts/blast.js sync-bounces 30`. Blasts also refuse to send if the configuration set is missing (they pause with a note) so mail never goes out untracked.
 
+**Watching it from the portal:** the Dashboard has an **Email authentication** panel — drop the DMARC report files providers email you (`.zip`, `.xml.gz`) onto it and it shows how many messages authenticated and, the part that matters, whether any sender that *isn't* ours is using the domain. The reports never name a recipient, so they say nothing about bounces.
+
 **Where it shows up:** Contacts tab → the address's status becomes `bounced` with a timestamp, and the blast's detail page counts it under *bounced*. `buildAudience` excludes bounced/unsubscribed addresses from every future blast automatically.
 
 ## 8. Inbound mail — `info@tug202.org`
@@ -121,6 +123,40 @@ Three ways to start one:
   ```
   `send <id>`, `send <id> --at "2026-09-22 09:00" --rate 20 --cap 180`, `pause|resume|unschedule <id>`, `status <id>`, `test <id> you@example.com`.
 - **API** with the bearer token: `POST /api/admin/blasts/:id/send` with `{"scheduled_at": "<ISO>"}` or an empty body.
+
+## 10. Making our mail *look* legitimate
+
+Authentication is what keeps us out of spam folders. Four things matter, in order of payoff:
+
+**a. SPF alignment — custom MAIL FROM.** Done in step 1 if you ticked the box; if the DMARC panel shows `spf fail` on our own SES traffic, it wasn't. One CloudShell command creates `mail.tug202.org` and points SES at it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/penpro/Tug202.Com/main/ops/ses-mailfrom-setup.sh | bash
+```
+
+Without it, DKIM alone carries DMARC (we still pass). With it, both checks pass and Outlook/Hotmail in particular treat us better.
+
+**b. Tighten the DMARC policy, once the reports are clean.** We publish `p=none` — "watch, don't act." After a couple of weeks where the Dashboard panel shows 100% authenticated and no unrecognised senders, move to quarantine, then reject. Route 53 → `_dmarc` TXT:
+
+```
+v=DMARC1; p=quarantine; pct=25; rua=mailto:wesleyaweaverjr@gmail.com   # step 1: 25% of failures
+v=DMARC1; p=quarantine; rua=mailto:wesleyaweaverjr@gmail.com           # step 2, a week later
+v=DMARC1; p=reject; rua=mailto:wesleyaweaverjr@gmail.com               # step 3, the goal
+```
+
+`p=reject` means nobody can spoof us at all. Only get there after the panel has been clean for a while — a rushed `p=reject` bounces our own mail if some sender was missed.
+
+**c. Sending behaviour.** Reputation is mostly earned, not configured:
+
+- Never mail an address that bounced. Handled automatically (suppression sync + audience filter).
+- Make unsubscribing trivial. Done — one-click `List-Unsubscribe` header and a footer link.
+- Keep volume steady. The trickle pacing exists for this; a cold domain that suddenly sends 10,000 looks like a compromised account.
+- Prefer confirmed addresses. The "keep me on the list" button builds that list; after a few sends, mail `confirmed` first and the rest rarely.
+- Watch the SES console's **Reputation metrics**: bounce rate under 5%, complaints under 0.1%. AWS pauses accounts that pass those.
+
+**d. Nice-to-have, later.** Google Postmaster Tools (postmaster.google.com) shows Gmail-specific spam rates for the domain — free, one TXT record. BIMI puts the crest next to our name in some clients but needs a paid certificate (~$1,000/yr); not worth it for us.
+
+**What "legit" does *not* require:** a paid mail service, a different domain, or anything on the server. We already have DKIM, SPF, DMARC, one-click unsubscribe, bounce suppression and a real postal address in every footer — that is the full checklist Google and Yahoo published for bulk senders.
 
 ## Config reference (`backend/.env`)
 
