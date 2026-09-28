@@ -89,7 +89,7 @@ router.get('/summary', async (req, res, next) => {
       UNION ALL (SELECT 'volunteer', id, created_at, name, interests FROM volunteer_signups)
       UNION ALL (SELECT 'partner', id, created_at, org_name, LEFT(purpose, 80) FROM partner_inquiries)
       UNION ALL (SELECT 'subscriber', id, created_at, COALESCE(NULLIF(name,''), email), '' FROM newsletter_subscribers)
-      UNION ALL (SELECT 'receipt', id, created_at, donor_name, CONCAT('receipt request'))
+      UNION ALL (SELECT 'receipt', id, created_at, donor_name, 'receipt request' FROM receipt_requests)
       ORDER BY created_at DESC LIMIT 15`);
     res.json({ contacts: c, volunteers: v, partners: p, subscribers: s, news: n, crm: ct, receipts: rc, recent });
   } catch (err) { next(err); }
