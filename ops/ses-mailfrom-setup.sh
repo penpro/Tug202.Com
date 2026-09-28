@@ -35,10 +35,19 @@ aws sesv2 put-email-identity-mail-from-attributes --email-identity "$DOMAIN" \
   --mail-from-domain "$SUB" --behavior-on-mx-failure USE_DEFAULT_VALUE
 echo "   set (SES verifies the MX within a few minutes)"
 
+echo "== checking the record actually resolves"
+for i in 1 2 3 4 5 6; do
+  if dig +short MX "$SUB" | grep -q amazonses; then echo "   MX is live: $(dig +short MX "$SUB")"; break; fi
+  [ "$i" = 6 ] && echo "   still not visible — Route 53 can take a few minutes; re-run this script to check again" || sleep 10
+done
+
 echo "== status"
 aws sesv2 get-email-identity --email-identity "$DOMAIN" \
   --query '{mailFrom:MailFromAttributes.MailFromDomain,status:MailFromAttributes.MailFromDomainStatus,dkim:DkimAttributes.Status,verified:VerifiedForSendingStatus}' --output table
 
 echo
-echo "PENDING is normal; re-run this in ~10 minutes and it should say SUCCESS."
-echo "Nothing on the server changes — SES rewrites the envelope sender itself."
+echo "PENDING is normal — SES re-checks on its own for three days. Re-run this any"
+echo "time to see where it got to; SUCCESS means SPF now aligns with tug202.org."
+echo "Nothing on the server changes — SES rewrites the envelope sender itself, and"
+echo "behaviour-on-failure is set to fall back to the default, so mail keeps flowing"
+echo "either way."
