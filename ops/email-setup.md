@@ -128,7 +128,7 @@ Three ways to start one:
 
 Authentication is what keeps us out of spam folders. Four things matter, in order of payoff:
 
-**a. SPF alignment — custom MAIL FROM.** Done in step 1 if you ticked the box; if the DMARC panel shows `spf fail` on our own SES traffic, it wasn't. One CloudShell command creates `mail.tug202.org` and points SES at it:
+**a. SPF alignment — custom MAIL FROM.** Ticking the box in step 1 is not enough on its own: if the domain was still moving to Route 53 at the time, SES publishes nothing, waits three days for an MX that never appears and emails you a CMF FAILURE notice. (That is exactly what happened here, 2026-09-24.) The fix, and the check, is one CloudShell command — it creates `mail.tug202.org`, re-points SES, and re-starts detection:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/penpro/Tug202.Com/main/ops/ses-mailfrom-setup.sh | bash

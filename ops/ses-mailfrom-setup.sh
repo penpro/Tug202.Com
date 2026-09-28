@@ -35,10 +35,14 @@ aws sesv2 put-email-identity-mail-from-attributes --email-identity "$DOMAIN" \
   --mail-from-domain "$SUB" --behavior-on-mx-failure USE_DEFAULT_VALUE
 echo "   set (SES verifies the MX within a few minutes)"
 
+# CloudShell has no dig or nslookup, so ask Route 53 itself what it is serving.
 echo "== checking the record actually resolves"
 for i in 1 2 3 4 5 6; do
-  if dig +short MX "$SUB" | grep -q amazonses; then echo "   MX is live: $(dig +short MX "$SUB")"; break; fi
-  [ "$i" = 6 ] && echo "   still not visible — Route 53 can take a few minutes; re-run this script to check again" || sleep 10
+  ANSWER=$(aws route53 test-dns-answer --hosted-zone-id "$ZONE" --record-name "$SUB" --record-type MX     --query 'RecordData[0]' --output text 2>/dev/null)
+  case "$ANSWER" in
+    *amazonses*) echo "   MX is live: $ANSWER"; break ;;
+    *) [ "$i" = 6 ] && echo "   not visible yet — Route 53 can take a few minutes; re-run this script to check" || sleep 10 ;;
+  esac
 done
 
 echo "== status"
