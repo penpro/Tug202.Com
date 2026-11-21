@@ -3,7 +3,7 @@ import Hero from '../components/Hero.jsx'
 import Photo from '../components/Photo.jsx'
 import Seo from '../components/Seo.jsx'
 import { org } from '../site.config.js'
-import { mission, board, programs } from '../content/index.js'
+import { mission, board, pastBoard, programs } from '../content/index.js'
 
 export default function Foundation() {
   return (
@@ -76,6 +76,12 @@ export default function Foundation() {
               </div>
             ))}
           </div>
+          {pastBoard.length > 0 && (
+            <p className="small" style={{ marginTop: 18 }}>
+              <strong>With thanks to those who have served:</strong>{' '}
+              {pastBoard.map(b => `${b.name} (${b.role})`).join(', ')}.
+            </p>
+          )}
         </div>
       </section>
 
@@ -105,7 +111,7 @@ export default function Foundation() {
               <p className="small" style={{ marginTop: 10 }}>
                 Donations are tax-deductible to the extent allowed by law. IRS determination letter
                 and annual financials are available on request &mdash;{' '}
-                <Link to="/contact">contact the Secretary</Link>.
+                <Link to="/contact">contact the board</Link>.
               </p>
             </div>
             <div className="prose">

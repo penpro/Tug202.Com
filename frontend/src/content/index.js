@@ -54,12 +54,16 @@ export const timeline = [
 ]
 
 export const board = [
-  { role: 'President', name: 'John Hansen' },
-  { role: 'Vice President', name: 'Mac McCune' },
+  { role: 'President', name: 'Mac McCune' },
+  { role: 'Vice President', name: 'John Hansen' },
   { role: 'Treasurer', name: 'Jon Salzman' },
-  { role: 'Secretary', name: 'Wesley Weaver' },
   { role: 'Director of Operations', name: 'Dale Bookwalter' },
   { role: 'Director at Large', name: 'Andy Hough' }
+]
+
+// People who have served on the board. Shown under the current roster.
+export const pastBoard = [
+  { role: 'Secretary', name: 'Wesley Weaver' }
 ]
 
 export const programs = [

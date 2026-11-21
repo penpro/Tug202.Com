@@ -17,7 +17,7 @@ export const boilerplate = {
     'Comanche is a rare surviving example of a WWII-era U.S. Navy auxiliary ocean tug. Completed in 1944 and commissioned as ATA-202, she was named USS Wampanoag in 1948 and later served as the U.S. Coast Guard cutter WMEC-202 before becoming known as Comanche. Her current U.S. Coast Guard Certificate of Documentation (Official Number 647250; IMO 8991786) records a steel-hulled, mechanically propelled vessel of 133.4 feet registered length, 33.1-foot breadth, 17.7-foot depth, 295 gross tons and 200 net tons (ITC), hailing port Seattle, Washington. She is propelled by two Cleveland Diesel 12-cylinder diesel-electric main engines driving a single screw, and holds a world record as the last ship still steered by deck-tube chain rudder control.',
   boundary:
     'Comanche does not hold a U.S. Coast Guard Certificate of Inspection for commercial passenger service. No grant funds, fees or donations are or will be used for paid carriage, charters, towing, freight or any underway commercial service. Public programs take place alongside the pier; cruises occur only in partnership with other nonprofit and community organizations, never as a charter, and the Foundation retains control of the vessel at all times.',
-  contact: 'Wesley Weaver, Secretary — info@tug202.org — tug202.org'
+  contact: 'Mac McCune, President — info@tug202.org — tug202.org'
 }
 
 // Helper: build a budget with computed subtotal / contingency / total.
